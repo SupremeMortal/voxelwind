@@ -1,27 +1,45 @@
-#include <openssl/evp.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <mbedtls/aes.h>
 #include "net_md_5_bungee_jni_cipher_NativeCipherImpl.h"
 
 typedef unsigned char byte;
 
-jlong JNICALL Java_net_md_15_bungee_jni_cipher_NativeCipherImpl_init(JNIEnv* env, jobject obj, jboolean forEncryption, jbyteArray key, jbyteArray iv) {
-    jbyte *keyBytes = env->GetByteArrayElements(key, NULL);
-    jbyte *ivBytes = env->GetByteArrayElements(iv, NULL);
+struct crypto_context {
+    int mode;
+    mbedtls_aes_context cipher;
+    byte *key;
+};
 
-    // TODO: Perhaps we need to throw some exceptions in the unlikely event this fails?
-    EVP_CIPHER_CTX *cipherCtx = EVP_CIPHER_CTX_new();
-    EVP_CipherInit(cipherCtx, EVP_aes_256_cfb8(), (byte*) keyBytes, (byte*) ivBytes, forEncryption);
+jlong JNICALL Java_net_md_15_bungee_jni_cipher_NativeCipherImpl_init(JNIEnv* env, jobject obj, jboolean forEncryption, jbyteArray key) {
+    jsize keyLen = env->GetArrayLength(key);
+    jbyte *keyBytes = env->GetByteArrayElements(key, NULL);
+
+    crypto_context *crypto = (crypto_context*) malloc(sizeof (crypto_context));
+    mbedtls_aes_init(&crypto->cipher);
+
+    mbedtls_aes_setkey_enc(&crypto->cipher, (byte*) keyBytes, keyLen * 8);
+
+    crypto->key = (byte*) malloc(keyLen);
+    memcpy(crypto->key, keyBytes, keyLen);
+
+    crypto->mode = (forEncryption) ? MBEDTLS_AES_ENCRYPT : MBEDTLS_AES_DECRYPT;
 
     env->ReleaseByteArrayElements(key, keyBytes, JNI_ABORT);
-    env->ReleaseByteArrayElements(iv, ivBytes, JNI_ABORT);
-    return (jlong) cipherCtx;
+    return (jlong) crypto;
 }
 
 void Java_net_md_15_bungee_jni_cipher_NativeCipherImpl_free(JNIEnv* env, jobject obj, jlong ctx) {
-    // TODO: Perhaps we need to throw some exceptions in the unlikely event this fails?
-    EVP_CIPHER_CTX_free((EVP_CIPHER_CTX*) ctx);
+    crypto_context *crypto = (crypto_context*) ctx;
+
+    mbedtls_aes_free(&crypto->cipher);
+    free(crypto->key);
+    free(crypto);
 }
 
 void Java_net_md_15_bungee_jni_cipher_NativeCipherImpl_cipher(JNIEnv* env, jobject obj, jlong ctx, jlong in, jlong out, jint length) {
-    // TODO: Perhaps we need to throw some exceptions in the unlikely event this fails?
-    EVP_CipherUpdate((EVP_CIPHER_CTX*) ctx, (byte*) out, &length, (byte*) in, length);
+    crypto_context *crypto = (crypto_context*) ctx;
+
+    mbedtls_aes_crypt_cfb8(&crypto->cipher, crypto->mode, length, crypto->key, (byte*) in, (byte*) out);
 }
