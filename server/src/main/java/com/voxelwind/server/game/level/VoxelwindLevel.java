@@ -35,8 +35,7 @@ import com.voxelwind.server.game.serializer.MetadataSerializer;
 import com.voxelwind.server.network.mcpe.packets.McpeBlockEntityData;
 import com.voxelwind.server.network.mcpe.packets.McpeUpdateBlock;
 import com.voxelwind.server.network.session.PlayerSession;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 import org.objectweb.asm.ClassReader;
 
 import javax.annotation.Nonnull;
@@ -47,9 +46,9 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+@Log4j2
 public class VoxelwindLevel implements Level {
     private static final int FULL_TIME = 24000;
-    private static final Logger LOGGER = LogManager.getLogger(VoxelwindLevel.class);
     private static final Map<Class<? extends Entity>, EntitySpawner> ENTITY_SPAWNER = new HashMap<>();
 
     static {
@@ -66,7 +65,7 @@ public class VoxelwindLevel implements Level {
                         Class<? extends Entity> spawnableClass = (Class<? extends Entity>) VoxelwindServer.class.getClassLoader().loadClass(classOptional.get());
                         ENTITY_SPAWNER.put(spawnableClass, new EntitySpawner((Class<? extends BaseEntity>) classInfo.load()));
                     } catch (ClassNotFoundException e) {
-                        LOGGER.error("Found linked entity which is not in the classpath: " + classOptional.get());
+                        log.error("Found linked entity which is not in the classpath: " + classOptional.get());
                     }
                 }
             }
@@ -214,7 +213,7 @@ public class VoxelwindLevel implements Level {
     public void broadcastBlockUpdate(Vector3i position) {
         Optional<Block> blockOptional = getBlockIfChunkLoaded(position);
         if (!blockOptional.isPresent()) {
-            LOGGER.error("Can't update for {} as chunk is not loaded", position);
+            log.error("Can't update for {} as chunk is not loaded", position);
             return;
         }
 

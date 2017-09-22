@@ -87,7 +87,7 @@ public class CompressionUtil {
 
                 ByteBuf packetBuf = null;
                 try {
-                    packetBuf = PacketRegistry.tryEncode(netPackage);
+                    packetBuf = PacketRegistry.tryEncode(netPackage, true);
                     Varints.encodeUnsigned(source, packetBuf.readableBytes());
                     source.writeBytes(packetBuf);
                 } finally {

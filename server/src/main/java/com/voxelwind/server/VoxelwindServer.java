@@ -40,9 +40,7 @@ import com.voxelwind.server.network.util.NativeCodeFactory;
 import com.voxelwind.server.plugin.VoxelwindPluginManager;
 import io.netty.channel.epoll.Epoll;
 import io.netty.util.ResourceLeakDetector;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
+import lombok.extern.log4j.Log4j2;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -55,10 +53,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
+@Log4j2
 public class VoxelwindServer implements Server {
     public static final String VOXELWIND_VERSION = "0.0.1 (Layer of Fog)";
     public static final ObjectMapper MAPPER = new ObjectMapper().disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-    private static final Logger LOGGER = LogManager.getLogger(VoxelwindServer.class);
     private final SessionManager sessionManager = new SessionManager();
     private final LevelManager levelManager = new LevelManager();
     private final ScheduledExecutorService timerService = Executors.unconfigurableScheduledExecutorService(
@@ -85,10 +83,10 @@ public class VoxelwindServer implements Server {
             if (fullySupportedLinux) {
                 NativeCodeFactory.hash.load();
             } else {
-                LOGGER.warn("You are running x64 Linux, but you are not using a fully-supported distribution. Server throughput and performance will be affected. Visit https://wiki.voxelwind.com/why_linux for more information.");
+                log.warn("You are running x64 Linux, but you are not using a fully-supported distribution. Server throughput and performance will be affected. Visit https://wiki.voxelwind.com/why_linux for more information.");
             }
         } else {
-            LOGGER.warn("You are not running x64 Linux. Server throughput and performance will be affected. Visit https://wiki.voxelwind.com/why_linux for more information.");
+            log.warn("You are not running x64 Linux. Server throughput and performance will be affected. Visit https://wiki.voxelwind.com/why_linux for more information.");
         }
 
         VoxelwindServer server = new VoxelwindServer();
@@ -101,7 +99,7 @@ public class VoxelwindServer implements Server {
 
     private void boot() throws Exception {
         // Say hello.
-        LOGGER.info("{} {} is coming online...", getName(), getVersion());
+        log.info("{} {} is coming online...", getName(), getVersion());
 
         // Basic initialization.
         commandManager.register("version", new VersionCommand(this));
@@ -117,7 +115,7 @@ public class VoxelwindServer implements Server {
         // Fire the initialize event
         eventManager.fire(ServerInitializeEvent.INSTANCE);
 
-        LOGGER.info("Loading worlds...");
+        log.info("Loading worlds...");
 
         // Start the levels.
         List<CompletableFuture<Level>> loadingLevels = new ArrayList<>();
@@ -139,7 +137,7 @@ public class VoxelwindServer implements Server {
         }
 
         if (defaultLevelName == null) {
-            LOGGER.fatal("No default level specified. Stopping!");
+            log.fatal("No default level specified. Stopping!");
             System.exit(1);
         }
 
@@ -148,7 +146,7 @@ public class VoxelwindServer implements Server {
             try {
                 loadedLevel = levelFuture.join();
             } catch (Throwable e) {
-                LOGGER.fatal("Unable to load a level, we are halting.", e);
+                log.fatal("Unable to load a level, we are halting.", e);
                 System.exit(1);
             }
             if (loadedLevel.getName().equals(defaultLevelName)) {
@@ -157,7 +155,7 @@ public class VoxelwindServer implements Server {
         }
 
         if (defaultLevel == null) {
-            LOGGER.fatal("No default level specified. Stopping!");
+            log.fatal("No default level specified. Stopping!");
             System.exit(1);
         }
 
@@ -174,7 +172,7 @@ public class VoxelwindServer implements Server {
         }
         configuration.getRcon().clearPassword();
 
-        LOGGER.info("Now alive on {}.", listener.getAddress());
+        log.info("Now alive on {}.", listener.getAddress());
 
         timerService.scheduleAtFixedRate(sessionManager::onTick, 50, 50, TimeUnit.MILLISECONDS);
 
@@ -201,23 +199,23 @@ public class VoxelwindServer implements Server {
     }
 
     private void loadPlugins() throws Exception {
-        LOGGER.info("Loading plugins...");
+        log.info("Loading plugins...");
         try {
             Path pluginPath = Paths.get("plugins");
             if (Files.notExists(pluginPath)) {
                 Files.createDirectory(pluginPath);
             } else {
                 if (!Files.isDirectory(pluginPath)) {
-                    LOGGER.info("Plugin location {} is not a directory, continuing without loading plugins.", pluginPath);
+                    log.info("Plugin location {} is not a directory, continuing without loading plugins.", pluginPath);
                     return;
                 }
             }
             pluginManager.loadPlugins(pluginPath);
             pluginManager.getAllPlugins().forEach(p -> eventManager.register(p.getPlugin(), p.getPlugin()));
         } catch (Exception e) {
-            LOGGER.error("Can't load plugins", e);
+            log.error("Can't load plugins", e);
         }
-        LOGGER.info("Loaded {} plugins.", pluginManager.getAllPlugins().size());
+        log.info("Loaded {} plugins.", pluginManager.getAllPlugins().size());
     }
 
     @Override
@@ -283,7 +281,7 @@ public class VoxelwindServer implements Server {
     @Override
     public CompletableFuture<Level> createLevel(LevelCreator creator) {
         Preconditions.checkNotNull(creator, "creator");
-        LOGGER.info("Creating level '{}'...", creator.getName());
+        log.info("Creating level '{}'...", creator.getName());
 
         CompletableFuture<LevelDataProvider> stage1 = new CompletableFuture<>();
 
@@ -331,7 +329,7 @@ public class VoxelwindServer implements Server {
                     return;
                 }
 
-                LOGGER.info("Loading spawn chunks for level '{}'...", level.getName());
+                log.info("Loading spawn chunks for level '{}'...", level.getName());
                 int spawnChunkX = level.getSpawnLocation().getFloorX() >> 4;
                 int spawnChunkZ = level.getSpawnLocation().getFloorZ() >> 4;
                 List<CompletableFuture<?>> loadChunkFutures = new ArrayList<>();
@@ -344,10 +342,10 @@ public class VoxelwindServer implements Server {
                         loadChunkFutures.toArray(new CompletableFuture[loadChunkFutures.size()]));
                 loadingFuture.whenComplete((o, throwable2) -> {
                     if (throwable2 != null) {
-                        LOGGER.error("Unable to load spawn chunks for level '{}'.", level.getName(), throwable2);
+                        log.error("Unable to load spawn chunks for level '{}'.", level.getName(), throwable2);
                         stage3.completeExceptionally(throwable2);
                     } else {
-                        LOGGER.info("Successfully loaded spawn chunks for level '{}'.", level.getName());
+                        log.info("Successfully loaded spawn chunks for level '{}'.", level.getName());
                         stage3.complete(level);
                     }
                 });

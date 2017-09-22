@@ -19,13 +19,12 @@ import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 
 import java.net.InetSocketAddress;
 
+@Log4j2
 public class McpeOverRakNetNetworkListener extends ChannelInitializer<DatagramChannel> implements NetworkListener {
-    private static final Logger LOGGER = LogManager.getLogger(McpeOverRakNetNetworkListener.class);
     private final Bootstrap bootstrap;
     private final InetSocketAddress address;
     private final VoxelwindServer server;
@@ -74,14 +73,14 @@ public class McpeOverRakNetNetworkListener extends ChannelInitializer<DatagramCh
                 try {
                     ChannelFuture future = bootstrap.bind(address).await();
                     if (future.isSuccess()) {
-                        LOGGER.debug("Bound listener #" + i + " for " + address);
+                        log.debug("Bound listener #" + i + " for " + address);
                         success = true;
                     } else {
-                        LOGGER.error("Unable to bind listener #" + i + " for " + address, future.cause());
+                        log.error("Unable to bind listener #" + i + " for " + address, future.cause());
                         // Continue - as long as we have at least one listener open, we're okay.
                     }
                 } catch (InterruptedException e) {
-                    LOGGER.info("Interrupted while waiting for bind");
+                    log.info("Interrupted while waiting for bind");
                 }
             }
             return success;
@@ -90,7 +89,7 @@ public class McpeOverRakNetNetworkListener extends ChannelInitializer<DatagramCh
                 ChannelFuture future = bootstrap.bind(address).await();
                 return future.isSuccess();
             } catch (InterruptedException e) {
-                LOGGER.info("Interrupted while waiting for bind");
+                log.info("Interrupted while waiting for bind");
             }
         }
         return false;

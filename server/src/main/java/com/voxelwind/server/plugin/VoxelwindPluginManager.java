@@ -9,8 +9,7 @@ import com.voxelwind.api.plugin.PluginManager;
 import com.voxelwind.api.server.Server;
 import com.voxelwind.server.plugin.loader.JavaPluginLoader;
 import com.voxelwind.server.plugin.util.DirectedAcyclicGraph;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -18,9 +17,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
+@Log4j2
 public class VoxelwindPluginManager implements PluginManager {
-    private static final Logger LOGGER = LogManager.getLogger(VoxelwindPluginManager.class);
-
     private final Map<String, PluginContainer> plugins = new HashMap<>();
     private final Server server;
 
@@ -50,7 +48,7 @@ public class VoxelwindPluginManager implements PluginManager {
                 try {
                     found.add(loader.loadPlugin(path));
                 } catch (Exception e) {
-                    LOGGER.error("Unable to enumerate plugin {}", path, e);
+                    log.error("Unable to enumerate plugin {}", path, e);
                 }
             }
         }
@@ -67,7 +65,7 @@ public class VoxelwindPluginManager implements PluginManager {
             for (String s : plugin.getDependencies()) {
                 Optional<PluginContainer> loadedPlugin = getPlugin(s);
                 if (!loadedPlugin.isPresent()) {
-                    LOGGER.error("Can't load plugin {} due to missing dependency {}", plugin.getId(), s);
+                    log.error("Can't load plugin {} due to missing dependency {}", plugin.getId(), s);
                     continue pluginLoad;
                 }
             }
@@ -77,7 +75,7 @@ public class VoxelwindPluginManager implements PluginManager {
             try {
                 pluginObject = loader.createPlugin(plugin);
             } catch (Exception e) {
-                LOGGER.error("Can't create plugin {}", plugin.getId(), e);
+                log.error("Can't create plugin {}", plugin.getId(), e);
                 continue;
             }
 
@@ -95,16 +93,12 @@ public class VoxelwindPluginManager implements PluginManager {
             graph.add(description);
             for (String s : description.getDependencies()) {
                 Optional<PluginDescription> in = descriptions.stream().filter(d -> d.getId().equals(s)).findFirst();
-                if (in.isPresent()) {
-                    graph.addEdges(description, in.get());
-                }
+                if (in.isPresent()) graph.addEdges(description, in.get());
             }
 
             for (String s : description.getSoftDependencies()) {
                 Optional<PluginDescription> in = descriptions.stream().filter(d -> d.getId().equals(s)).findFirst();
-                if (in.isPresent()) {
-                    graph.addEdges(description, in.get());
-                }
+                in.ifPresent(pluginDescription -> graph.addEdges(description, pluginDescription));
             }
         }
 

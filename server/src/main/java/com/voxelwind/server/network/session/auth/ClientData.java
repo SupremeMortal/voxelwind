@@ -7,8 +7,8 @@ import lombok.Value;
 @Value
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ClientData {
-    @JsonProperty("ADRole")
-    private final int adRole;
+    @JsonProperty("CapeData")
+    private final String capeData;
     @JsonProperty("ClientRandomId")
     private final long clientRandomId;
     @JsonProperty("CurrentInputMode")
@@ -29,10 +29,12 @@ public class ClientData {
     private final String serverAddress;
     @JsonProperty("SkinData")
     private final byte[] skinData; // Jackson conveniently deserializes from Base64
+    @JsonProperty("SkinGeometry")
+    private final String skinGeometry;
+    @JsonProperty("SkinGeometryName")
+    private final String skinGeometryName;
     @JsonProperty("SkinId")
     private final String skinId;
-    @JsonProperty("TenantId")
-    private final String tenantId;
     @JsonProperty("UIProfile")
     private final int uiProfile;
 }

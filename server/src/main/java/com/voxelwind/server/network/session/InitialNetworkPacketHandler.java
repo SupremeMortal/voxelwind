@@ -20,10 +20,7 @@ import com.voxelwind.server.network.session.auth.JwtPayload;
 import com.voxelwind.server.network.session.auth.TemporarySession;
 import com.voxelwind.server.network.util.EncryptionUtil;
 import com.voxelwind.server.network.util.NativeCodeFactory;
-import io.netty.util.AsciiString;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
+import lombok.extern.log4j.Log4j2;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.*;
@@ -32,12 +29,12 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
 
+@Log4j2
 public class InitialNetworkPacketHandler implements NetworkPacketHandler {
     private static final boolean CAN_USE_ENCRYPTION = CryptoUtil.isJCEUnlimitedStrength() || NativeCodeFactory.cipher.isLoaded();
     private static final String MOJANG_PUBLIC_KEY_BASE64 =
             "MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE8ELkixyLcwlZryUQcu1TvPOmI2B7vX83ndnWRUaXm74wFfa5f/lwQNTfrLVHa2PmenpGI6JhIMUJaWZrjmMj90NoKNFSNBuKdm8rYiXsfaz3K36x/1U26HpG0ZxK/V1V";
     private static final PublicKey MOJANG_PUBLIC_KEY;
-    private static final Logger LOGGER = LogManager.getLogger(InitialNetworkPacketHandler.class);
 
     static {
         try {
@@ -63,10 +60,10 @@ public class InitialNetworkPacketHandler implements NetworkPacketHandler {
             Optional<InetSocketAddress> address = session.getRemoteAddress();
             int[] compatible = VersionUtil.getCompatibleProtocolVersions();
             if (address.isPresent()) {
-                LOGGER.error("Client {} has protocol version {}, not one of {}", address.get(), packet.getProtocolVersion(),
+                log.error("Client {} has protocol version {}, not one of {}", address.get(), packet.getProtocolVersion(),
                         Arrays.toString(compatible));
             } else {
-                LOGGER.error("Client has protocol version {}, not {}", packet.getProtocolVersion(),
+                log.error("Client has protocol version {}, not {}", packet.getProtocolVersion(),
                         Arrays.toString(compatible));
             }
 
@@ -125,7 +122,7 @@ public class InitialNetworkPacketHandler implements NetworkPacketHandler {
                 initializePlayerSession();
             }
         } catch (Exception e) {
-            LOGGER.error("Unable to initialize player session", e);
+            log.error("Unable to initialize player session", e);
             session.disconnect("Internal server error");
         }
     }
@@ -270,6 +267,7 @@ public class InitialNetworkPacketHandler implements NetworkPacketHandler {
         }
 
         JsonNode payload = getPayload(clientData);
+        log.debug("[CLIENT DATA] {}", payload.toString());
         return VoxelwindServer.MAPPER.convertValue(payload, ClientData.class);
     }
 

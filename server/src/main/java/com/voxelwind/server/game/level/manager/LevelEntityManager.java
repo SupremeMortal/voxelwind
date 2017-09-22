@@ -14,9 +14,7 @@ import com.voxelwind.server.network.session.PlayerSession;
 import gnu.trove.iterator.TLongObjectIterator;
 import gnu.trove.map.TLongObjectMap;
 import gnu.trove.map.hash.TLongObjectHashMap;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
+import lombok.extern.log4j.Log4j2;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -28,9 +26,8 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * This manager handles entities in levels. This class is safe for concurrent use.
  */
+@Log4j2
 public class LevelEntityManager {
-    private static final Logger LOGGER = LogManager.getLogger(LevelEntityManager.class);
-
     private final TLongObjectMap<BaseEntity> entities = new TLongObjectHashMap<>();
     private final List<System> systems = new CopyOnWriteArrayList<>();
     private final AtomicLong entityIdAllocator = new AtomicLong();
@@ -71,8 +68,8 @@ public class LevelEntityManager {
                 try {
                     // Check if the entity was removed.
                     if (entity.isRemoved()) {
-                        if (LOGGER.isDebugEnabled()) {
-                            LOGGER.debug("{} was removed, discarding.", entity);
+                        if (log.isDebugEnabled()) {
+                            log.debug("{} was removed, discarding.", entity);
                         }
                         entitiesChanged.set(true);
                         synchronized (entities) {
@@ -86,16 +83,16 @@ public class LevelEntityManager {
                         if (!system.isSystemCompatible(entity)) {
                             continue;
                         }
-                        if (LOGGER.isDebugEnabled()) {
-                            LOGGER.debug("Running entity system {} on {}", system, entity);
+                        if (log.isDebugEnabled()) {
+                            log.debug("Running entity system {} on {}", system, entity);
                         }
                         system.getRunner().run(entity);
                     }
 
                     // After ticking the systems, one of them may have removed the entity. Check it again.
                     if (entity.isRemoved()) {
-                        if (LOGGER.isDebugEnabled()) {
-                            LOGGER.debug("{} was removed after systems ticked, discarding.", entity);
+                        if (log.isDebugEnabled()) {
+                            log.debug("{} was removed after systems ticked, discarding.", entity);
                         }
                         entitiesChanged.set(true);
                         synchronized (entities) {
@@ -125,10 +122,10 @@ public class LevelEntityManager {
                         entities.remove(entity.getEntityId());
                     }
                     if (!isPlayer) {
-                        LOGGER.error("Unable to tick entity {}. The entity will be removed.", entity, e);
+                        log.error("Unable to tick entity {}. The entity will be removed.", entity, e);
                         entity.remove();
                     } else {
-                        LOGGER.error("Unable to tick player {}. The player will be disconnected.", entity, e);
+                        log.error("Unable to tick player {}. The player will be disconnected.", entity, e);
                         ((PlayerSession) entity).disconnect("Internal server error during tick");
                     }
                 }

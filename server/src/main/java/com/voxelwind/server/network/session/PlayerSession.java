@@ -58,8 +58,7 @@ import com.voxelwind.server.network.mcpe.packets.*;
 import com.voxelwind.server.network.raknet.handler.NetworkPacketHandler;
 import gnu.trove.set.TLongSet;
 import gnu.trove.set.hash.TLongHashSet;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -72,9 +71,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.voxelwind.server.network.mcpe.packets.McpePlayerAction.*;
 
+@Log4j2
 public class PlayerSession extends LivingEntity implements Player, InventoryObserver, DeathSystem.CustomDeath {
-    private static final Logger LOGGER = LogManager.getLogger(PlayerSession.class);
-
     private final McpeSession session;
     private final Set<Vector2i> sentChunks = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final TLongSet isViewing = new TLongHashSet();
@@ -191,7 +189,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
     }
 
     public void doInitialSpawn() {
-        LOGGER.info("{} ({}) has logged in.", getName(), getRemoteAddress().map(Object::toString).orElse("UNKNOWN"));
+        log.info("{} ({}) has logged in.", getName(), getRemoteAddress().map(Object::toString).orElse("UNKNOWN"));
 
         // Fire PlayerSpawnEvent.
         // TODO: Fill this in of known player data.
@@ -374,7 +372,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
     private CompletableFuture<List<Chunk>> sendNewChunks() {
         return getChunksForRadius(viewDistance).whenComplete((chunks, throwable) -> {
             if (throwable != null) {
-                LOGGER.error("Unable to load chunks for " + getMcpeSession().getAuthenticationProfile().getDisplayName(), throwable);
+                log.error("Unable to load chunks for " + getMcpeSession().getAuthenticationProfile().getDisplayName(), throwable);
                 disconnect("Internal server error");
                 return;
             }
@@ -661,7 +659,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
 
                     spawned = true;
 
-                    LOGGER.info("{} ({}) has been spawned at {} ({})", getName(), getRemoteAddress().map(Object::toString).orElse("UNKNOWN"),
+                    log.info("{} ({}) has been spawned at {} ({})", getName(), getRemoteAddress().map(Object::toString).orElse("UNKNOWN"),
                             getPosition(), getLevel().getName());
 
                     PlayerJoinEvent event = new PlayerJoinEvent(PlayerSession.this, TextFormat.YELLOW + getName() + " joined the game.");
@@ -756,7 +754,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                 } catch (CommandNotFoundException e) {
                     sendMessage(TextFormat.RED + "No such command found.");
                 } catch (CommandException e) {
-                    LOGGER.error("Error while running command '{}' for {}", command, getName(), e);
+                    log.error("Error while running command '{}' for {}", command, getName(), e);
                     sendMessage(TextFormat.RED + "An error has occurred while running the command.");
                 }
                 return;
@@ -791,7 +789,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
             if (hasSubstantiallyMoved(originalPosition, newPosition)) {
                 updateViewableEntities();
                 sendNewChunks().exceptionally(throwable -> {
-                    LOGGER.error("Unable to send chunks", throwable);
+                    log.error("Unable to send chunks", throwable);
                     disconnect("Internal server error");
                     return null;
                 });
@@ -889,7 +887,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
             Optional<Chunk> chunkOptional = getLevel().getChunkIfLoaded(chunkX, chunkZ);
             if (!chunkOptional.isPresent()) {
                 // Chunk not loaded, danger ahead!
-                LOGGER.error("{} tried to remove block at unloaded chunk ({}, {})", getName(), chunkX, chunkZ);
+                log.error("{} tried to remove block at unloaded chunk ({}, {})", getName(), chunkX, chunkZ);
                 return;
             }
 
@@ -932,8 +930,8 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
             } else if (packet.getFace() >= 0 && packet.getFace() <= 5) {
                 // Sanity check:
                 Optional<ItemStack> actuallyInHand = playerInventory.getStackInHand();
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Held: {}, slot: {}", actuallyInHand, playerInventory.getHeldHotbarSlot());
+                if (log.isDebugEnabled()) {
+                    log.debug("Held: {}, slot: {}", actuallyInHand, playerInventory.getHeldHotbarSlot());
                 }
                 if ((actuallyInHand.isPresent() && actuallyInHand.get().getItemType() != packet.getStack().getItemType()) ||
                         !actuallyInHand.isPresent() && packet.getStack().getItemType() == BlockTypes.AIR) {
@@ -1023,7 +1021,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
             try {
                 argsNode = VoxelwindServer.MAPPER.readTree(packet.getInputJson());
             } catch (IOException e) {
-                LOGGER.error("Unable to decode command argument JSON", e);
+                log.error("Unable to decode command argument JSON", e);
                 return;
             }
 
@@ -1045,7 +1043,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
             }
 
             if (command == null) {
-                LOGGER.debug("Unable to reconstruct command for packet {}", packet);
+                log.debug("Unable to reconstruct command for packet {}", packet);
                 sendMessage(TextFormat.RED + "An error has occurred while running the command.");
                 return;
             }
@@ -1055,7 +1053,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
             } catch (CommandNotFoundException e) {
                 sendMessage(TextFormat.RED + "No such command found.");
             } catch (CommandException e) {
-                LOGGER.error("Error while running command '{}' for {}", command, getName(), e);
+                log.error("Error while running command '{}' for {}", command, getName(), e);
                 sendMessage(TextFormat.RED + "An error has occurred while running the command.");
             }
         }
@@ -1201,7 +1199,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                 }
                 session.updateViewableEntities();
                 session.sendNewChunks().exceptionally(throwable -> {
-                    LOGGER.error("Unable to send chunks", throwable);
+                    log.error("Unable to send chunks", throwable);
                     session.disconnect("Internal server error");
                     return null;
                 });

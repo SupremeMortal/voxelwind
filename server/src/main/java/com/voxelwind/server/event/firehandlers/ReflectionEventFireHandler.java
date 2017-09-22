@@ -4,8 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.voxelwind.api.server.event.Event;
 import com.voxelwind.api.server.event.Listener;
 import com.voxelwind.server.event.EventFireHandler;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 
 import javax.annotation.Nonnull;
 import java.lang.reflect.InvocationTargetException;
@@ -19,8 +18,8 @@ import java.util.concurrent.TimeUnit;
 /**
  * A {@link com.voxelwind.server.event.EventFireHandler} that uses reflection to call the method.
  */
+@Log4j2
 public class ReflectionEventFireHandler implements EventFireHandler {
-    private static final Logger LOGGER = LogManager.getLogger(ReflectionEventFireHandler.class);
     private static final long LONG_RUNNING_EVENT_TIME = TimeUnit.MILLISECONDS.toNanos(5);
     private final List<ListenerMethod> methods;
 
@@ -31,16 +30,16 @@ public class ReflectionEventFireHandler implements EventFireHandler {
     @Override
     public void fire(Event event) {
         long start = System.nanoTime();
-        for (int i = 0; i < methods.size(); i++) {
+        for (ListenerMethod method : methods) {
             try {
-                methods.get(i).run(event);
+                method.run(event);
             } catch (InvocationTargetException | IllegalAccessException e) {
-                LOGGER.error("Exception occurred while executing method " + methods.get(i) + " for " + event, e);
+                log.error("Exception occurred while executing method " + method + " for " + event, e);
             }
         }
         long differenceTaken = System.nanoTime() - start;
         if (differenceTaken >= LONG_RUNNING_EVENT_TIME) {
-            LOGGER.warn("Event {} took {}ms to fire!", event, BigDecimal.valueOf(differenceTaken)
+            log.warn("Event {} took {}ms to fire!", event, BigDecimal.valueOf(differenceTaken)
                     .divide(new BigDecimal("1000000"), RoundingMode.HALF_UP).setScale(2, RoundingMode.HALF_UP));
         }
     }

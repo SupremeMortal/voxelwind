@@ -18,10 +18,8 @@ import com.voxelwind.server.network.util.CompressionUtil;
 import com.voxelwind.server.network.util.NativeCodeFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
+import lombok.extern.log4j.Log4j2;
 import net.md_5.bungee.jni.cipher.BungeeCipher;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import javax.annotation.Nonnull;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -33,6 +31,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
+@Log4j2
 public class McpeSession {
     private static final ThreadLocal<VoxelwindHash> hashLocal = new ThreadLocal<VoxelwindHash>() {
         @Override
@@ -40,7 +39,6 @@ public class McpeSession {
             return NativeCodeFactory.hash.newInstance();
         }
     };
-    private static final Logger LOGGER = LogManager.getLogger(McpeSession.class);
     private static final int TIMEOUT_MS = 30000;
     private final AtomicLong encryptedSentPacketGenerator = new AtomicLong();
     private final Queue<NetworkPackage> currentlyQueued = new ConcurrentLinkedQueue<>();
@@ -101,9 +99,9 @@ public class McpeSession {
     }
 
     private void internalSendPackage(NetworkPackage netPackage) {
-        if (LOGGER.isDebugEnabled()) {
+        if (log.isDebugEnabled()) {
             String to = connection.getRemoteAddress().map(InetSocketAddress::toString).orElse(connection.toString());
-            LOGGER.debug("Sending packet {} to {}", netPackage, to);
+            log.debug("Sending packet {} to {}", netPackage, to);
         }
 
         ByteBuf dataToSend;
@@ -180,7 +178,7 @@ public class McpeSession {
                     // Delay things a tiny bit
                     Thread.sleep(1);
                 } catch (InterruptedException e) {
-                    LOGGER.error("Interrupted", e);
+                    log.error("Interrupted", e);
                 }
 
                 continue;
@@ -193,7 +191,7 @@ public class McpeSession {
                     // Delay things a tiny bit
                     Thread.sleep(1);
                 } catch (InterruptedException e) {
-                    LOGGER.error("Interrupted", e);
+                    log.error("Interrupted", e);
                 }
             }
 
@@ -311,10 +309,10 @@ public class McpeSession {
         }
 
         if (authenticationProfile != null) {
-            LOGGER.info("{} ({}) has been disconnected from the server: {}", authenticationProfile.getDisplayName(),
+            log.info("{} ({}) has been disconnected from the server: {}", authenticationProfile.getDisplayName(),
                     getRemoteAddress().map(Object::toString).orElse("UNKNOWN"), reason);
         } else {
-            LOGGER.info("{} has lost connection to the server: {}", getRemoteAddress().map(Object::toString).orElse("UNKNOWN"),
+            log.info("{} has lost connection to the server: {}", getRemoteAddress().map(Object::toString).orElse("UNKNOWN"),
                     reason);
         }
 

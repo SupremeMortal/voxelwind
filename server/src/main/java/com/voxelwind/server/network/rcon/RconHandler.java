@@ -10,14 +10,12 @@ import com.voxelwind.server.network.listeners.RconNetworkListener;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
+import lombok.extern.log4j.Log4j2;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
+@Log4j2
 public class RconHandler extends SimpleChannelInboundHandler<RconMessage> {
-    private static final Logger LOGGER = LogManager.getLogger(RconHandler.class);
     private final byte[] password;
     private final Server server;
     private final RconNetworkListener listener;
@@ -57,7 +55,7 @@ public class RconHandler extends SimpleChannelInboundHandler<RconMessage> {
                 } catch (CommandNotFoundException e) {
                     body = "No such command found.";
                 } catch (CommandException e) {
-                    LOGGER.error("Unable to run command {} for remote connection {}", message.getBody(), channel.remoteAddress(),
+                    log.error("Unable to run command {} for remote connection {}", message.getBody(), channel.remoteAddress(),
                             e);
                     body = "An error has occurred. Information has been logged to the console.";
                 }
@@ -68,7 +66,7 @@ public class RconHandler extends SimpleChannelInboundHandler<RconMessage> {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        LOGGER.error("An error occurred whilst handling a RCON request of {}", ctx.channel().remoteAddress(), cause);
+        log.error("An error occurred whilst handling a RCON request of {}", ctx.channel().remoteAddress(), cause);
         // Better to close the channel instead.
         ctx.close();
     }

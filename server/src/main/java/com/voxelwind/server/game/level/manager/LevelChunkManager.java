@@ -15,8 +15,7 @@ import gnu.trove.map.TLongLongMap;
 import gnu.trove.map.TLongObjectMap;
 import gnu.trove.map.hash.TLongLongHashMap;
 import gnu.trove.map.hash.TLongObjectHashMap;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -31,9 +30,8 @@ import java.util.concurrent.atomic.AtomicReference;
  * This class keeps all loaded chunks in memory and cleans chunks that are no longer required to be loaded. Chunks are
  * loaded asynchronously and only one attempt to load the same chunk is made, even with concurrent callers.
  */
+@Log4j2
 public class LevelChunkManager {
-    private static final Logger LOGGER = LogManager.getLogger(LevelChunkManager.class);
-
     private final TLongObjectMap<Chunk> chunksLoaded = TCollections.synchronizedMap(new TLongObjectHashMap<Chunk>());
     private final TLongObjectMap<LoadingTask> chunksToLoad = TCollections.synchronizedMap(new TLongObjectHashMap<LoadingTask>());
     private final TLongLongMap loadedTimes = TCollections.synchronizedMap(new TLongLongHashMap());
@@ -136,7 +134,7 @@ public class LevelChunkManager {
                 loadedTimes.remove(chunkKey);
                 level.getEntityManager().getEntitiesInChunk(x, z).forEach(Entity::remove);
 
-                LOGGER.debug("Chunk GC cleared chunk @ " + level.getName() + " x" + x + " z" + z);
+                log.debug("Chunk GC cleared chunk @ " + level.getName() + " x" + x + " z" + z);
             }
         }
     }
@@ -168,8 +166,8 @@ public class LevelChunkManager {
 
                 if (chunk == null) {
                     long seed = chunkSeed(x, z);
-                    if (LOGGER.isDebugEnabled()) {
-                        LOGGER.debug("Generating chunk ({},{}) using {} and seed {}", x, z, backingChunkGenerator.getClass().getName(), seed);
+                    if (log.isDebugEnabled()) {
+                        log.debug("Generating chunk ({},{}) using {} and seed {}", x, z, backingChunkGenerator.getClass().getName(), seed);
                     }
                     SectionedChunk generated = new SectionedChunk(x, z, level);
                     backingChunkGenerator.generate(level, generated, new Random(seed));

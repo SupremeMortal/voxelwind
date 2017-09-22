@@ -15,8 +15,7 @@ import gnu.trove.map.TShortObjectMap;
 import gnu.trove.map.hash.TShortObjectHashMap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 
 import javax.annotation.Nonnull;
 import java.net.InetSocketAddress;
@@ -28,8 +27,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@Log4j2
 public class RakNetSession implements SessionConnection {
-    private static final Logger LOGGER = LogManager.getLogger(RakNetSession.class);
     private static final int ALLOWED_OUTSTANDING_SPLIT_PACKETS = 32;
     private final InetSocketAddress remoteAddress;
     private final short mtu;
@@ -118,7 +117,7 @@ public class RakNetSession implements SessionConnection {
             for (int i = range.getStart(); i <= range.getEnd(); i++) {
                 SentDatagram datagram = datagramAcks.get(i);
                 if (datagram != null) {
-                    LOGGER.debug("Resending datagram " + datagram.getDatagram().getDatagramSequenceNumber() + " due to NAK");
+                    log.debug("Resending datagram " + datagram.getDatagram().getDatagramSequenceNumber() + " due to NAK");
                     datagram.refreshForResend();
                     channel.write(new AddressedRakNetDatagram(datagram.getDatagram(), remoteAddress), channel.voidPromise());
                 }
@@ -176,7 +175,7 @@ public class RakNetSession implements SessionConnection {
     private void resendStalePackets() {
         for (SentDatagram datagram : datagramAcks.values()) {
             if (datagram.isStale()) {
-                LOGGER.debug("Resending datagram " + datagram.getDatagram().getDatagramSequenceNumber() + " due to being stale");
+                log.debug("Resending datagram " + datagram.getDatagram().getDatagramSequenceNumber() + " due to being stale");
                 datagram.refreshForResend();
                 channel.write(new AddressedRakNetDatagram(datagram.getDatagram(), remoteAddress), channel.voidPromise());
             }

@@ -20,21 +20,17 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
+import lombok.extern.log4j.Log4j2;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.zip.DataFormatException;
 
+@Log4j2
 public class RakNetDatagramHandler extends SimpleChannelInboundHandler<AddressedRakNetDatagram> {
     private static final InetSocketAddress LOOPBACK_MCPE = new InetSocketAddress(InetAddress.getLoopbackAddress(), 19132);
     private static final InetSocketAddress JUNK_ADDRESS = new InetSocketAddress(InetAddresses.forString("255.255.255.255"), 19132);
-    private static final Logger LOGGER = LogManager.getLogger(RakNetDatagramHandler.class);
     private final VoxelwindServer server;
 
     public RakNetDatagramHandler(VoxelwindServer server) {
@@ -88,8 +84,8 @@ public class RakNetDatagramHandler extends SimpleChannelInboundHandler<Addressed
     }
 
     private void handlePackage(NetworkPackage netPackage, McpeSession session) throws Exception {
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Inbound package: {}", netPackage);
+        if (log.isDebugEnabled()) {
+            log.debug("Inbound package: {}", netPackage);
         }
 
         if (netPackage == null) {
@@ -97,7 +93,7 @@ public class RakNetDatagramHandler extends SimpleChannelInboundHandler<Addressed
         }
 
         if (session.getHandler() == null) {
-            LOGGER.error("Session " + session.getRemoteAddress() + " has no handler!?");
+            log.error("Session " + session.getRemoteAddress() + " has no handler!?");
             return;
         }
 
@@ -118,8 +114,8 @@ public class RakNetDatagramHandler extends SimpleChannelInboundHandler<Addressed
                     cleartext = wrappedData;
                 }
 
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("[MCPE WRAPPER HEX]\n{}", ByteBufUtil.prettyHexDump(cleartext));
+                if (log.isDebugEnabled()) {
+                    log.debug("[MCPE WRAPPER HEX]\n{}", ByteBufUtil.prettyHexDump(cleartext));
                 }
 
                 packages = CompressionUtil.decompressWrapperPackets(cleartext);
@@ -168,9 +164,9 @@ public class RakNetDatagramHandler extends SimpleChannelInboundHandler<Addressed
 
         // Unknown
         if (netPackage instanceof McpeUnknown) {
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Unknown packet received with ID " + Integer.toHexString(((McpeUnknown) netPackage).getId()));
-                LOGGER.debug("Dump: {}", ByteBufUtil.hexDump(((McpeUnknown) netPackage).getBuf()));
+            if (log.isDebugEnabled()) {
+                log.debug("Unknown packet received with ID " + Integer.toHexString(((McpeUnknown) netPackage).getId()));
+                log.debug("Dump: {}", ByteBufUtil.hexDump(((McpeUnknown) netPackage).getBuf()));
             }
             ((McpeUnknown) netPackage).getBuf().release();
         }
