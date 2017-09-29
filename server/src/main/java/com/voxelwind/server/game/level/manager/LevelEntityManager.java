@@ -104,7 +104,7 @@ public class LevelEntityManager {
                     if (entity.isStale()) {
                         // Need to send packets.
                         McpeMoveEntity moveEntityPacket = new McpeMoveEntity();
-                        moveEntityPacket.setEntityId(entity.getEntityId());
+                        moveEntityPacket.setRuntimeEntityId(entity.getEntityId());
                         moveEntityPacket.setPosition(entity.getGamePosition());
                         moveEntityPacket.setRotation(entity.getRotation());
                         level.getPacketManager().queuePacketForViewers(entity, moveEntityPacket);

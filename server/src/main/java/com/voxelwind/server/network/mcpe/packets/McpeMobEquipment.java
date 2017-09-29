@@ -9,7 +9,7 @@ import lombok.Data;
 
 @Data
 public class McpeMobEquipment implements NetworkPackage {
-    private long entityId;
+    private long runtimeEntityId;
     private ItemStack stack;
     private byte inventorySlot;
     private byte hotbarSlot;
@@ -17,7 +17,7 @@ public class McpeMobEquipment implements NetworkPackage {
 
     @Override
     public void decode(ByteBuf buffer) {
-        entityId = Varints.decodeUnsigned(buffer);
+        runtimeEntityId = Varints.decodeUnsigned(buffer);
         stack = McpeUtil.readItemStack(buffer);
         inventorySlot = buffer.readByte();
         hotbarSlot = buffer.readByte();
@@ -26,7 +26,7 @@ public class McpeMobEquipment implements NetworkPackage {
 
     @Override
     public void encode(ByteBuf buffer) {
-        Varints.encodeUnsigned(buffer, entityId);
+        Varints.encodeUnsigned(buffer, runtimeEntityId);
         McpeUtil.writeItemStack(buffer, stack);
         buffer.writeInt(inventorySlot);
         buffer.writeInt(hotbarSlot);

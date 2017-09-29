@@ -2,6 +2,7 @@ package com.voxelwind.server.network.util;
 
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.voxelwind.server.network.mcpe.packets.McpeServerToClientHandshake;
@@ -11,6 +12,8 @@ import javax.crypto.KeyAgreement;
 import java.net.URI;
 import java.security.*;
 import java.security.interfaces.ECPrivateKey;
+import java.security.interfaces.ECPublicKey;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
 @Log4j2
@@ -51,7 +54,10 @@ public class EncryptionUtil {
 
     public static McpeServerToClientHandshake createHandshakePacket(KeyPair pair, byte[] token) {
         ECPrivateKey privKey = (ECPrivateKey) pair.getPrivate();
-        URI x5u = URI.create(Base64.getEncoder().encodeToString(pair.getPublic().getEncoded()));
+        URI x5u = URI.create(Base64.getEncoder().encodeToString(pair.getPublic().getEncoded().clone()));
+        X509EncodedKeySpec key = new X509EncodedKeySpec(pair.getPublic().getEncoded());
+
+
         McpeServerToClientHandshake handshake = new McpeServerToClientHandshake();
 
         JWTClaimsSet claimsSet = new JWTClaimsSet.Builder().claim("salt", Base64.getUrlEncoder().encodeToString(token)).build();
@@ -66,7 +72,7 @@ public class EncryptionUtil {
         } catch (JOSEException e) {
             throw new RuntimeException("Unable to sign JWT", e);
         }
-        handshake.setPayload(new AsciiString(jwt.serialize()));
+        handshake.setPayload(jwt.serialize());
         return handshake;
     }
 

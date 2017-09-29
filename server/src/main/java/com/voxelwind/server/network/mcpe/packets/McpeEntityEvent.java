@@ -22,21 +22,21 @@ public class McpeEntityEvent implements NetworkPackage {
 	public static final byte AMBIENT_SOUND = 16;
 	public static final byte RESPAWN = 17;
 
-    private long entityId;
-    private byte event;
+    private long runtimeEntityId;
+    private byte eventId;
     private int unknown;
 
     @Override
     public void decode(ByteBuf buffer) {
-        entityId = Varints.decodeUnsigned(buffer);
-        event = buffer.readByte();
+        runtimeEntityId = Varints.decodeUnsigned(buffer);
+        eventId = buffer.readByte();
         unknown = Varints.decodeSigned(buffer);
     }
 
     @Override
     public void encode(ByteBuf buffer) {
-        Varints.encodeUnsigned(buffer, entityId);
-        buffer.writeByte(event);
+        Varints.encodeUnsigned(buffer, runtimeEntityId);
+        buffer.writeByte(eventId);
         Varints.encodeSigned(buffer, unknown);
     }
 }

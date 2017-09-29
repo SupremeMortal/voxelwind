@@ -9,46 +9,56 @@ import lombok.Data;
 @Data
 public class McpeText implements NetworkPackage {
     private TextType type;
+    private boolean needsTranslation= false;
     private String source = "";
     private String message = "";
     private TranslatedMessage translatedMessage;
+    private String xuid = "";
 
     @Override
     public void decode(ByteBuf buffer) {
         type = TextType.values()[buffer.readByte()];
+        needsTranslation = buffer.readBoolean();
         switch (type) {
-            case SOURCE:
-            case POPUP:
-                source = McpeUtil.readVarintLengthString(buffer);
-                // Intentional fall-through.
             case RAW:
+            case CHAT:
+            case TRANSLATION:
+            case POPUP:
+            case JUKEBOX_POPUP:
+                message = McpeUtil.readVarintLengthString(buffer);
+                //TODO: add parameters.
             case TIP:
             case SYSTEM:
                 message = McpeUtil.readVarintLengthString(buffer);
-                break;
-            case TRANSLATE:
-                translatedMessage = McpeUtil.readTranslatedMessage(buffer);
-                break;
+            case WHISPER:
+            case ANNOUNCEMENT:
+                source = McpeUtil.readVarintLengthString(buffer);
+                message = McpeUtil.readVarintLengthString(buffer);
         }
+        xuid = McpeUtil.readVarintLengthString(buffer);
     }
 
     @Override
     public void encode(ByteBuf buffer) {
         buffer.writeByte(type.ordinal());
+        buffer.writeBoolean(needsTranslation);
         switch (type) {
-            case SOURCE:
-            case POPUP:
-                McpeUtil.writeVarintLengthString(buffer, source);
-                // Intentional fall-through.
             case RAW:
+            case CHAT:
+            case TRANSLATION:
+            case POPUP:
+            case JUKEBOX_POPUP:
+                McpeUtil.writeVarintLengthString(buffer, message);
+                //TODO: add parameters.
             case TIP:
             case SYSTEM:
                 McpeUtil.writeVarintLengthString(buffer, message);
-                break;
-            case TRANSLATE:
-                McpeUtil.writeTranslatedMessage(buffer, translatedMessage);
-                break;
+            case WHISPER:
+            case ANNOUNCEMENT:
+                McpeUtil.writeVarintLengthString(buffer, source);
+                McpeUtil.writeVarintLengthString(buffer, message);
         }
+        McpeUtil.writeVarintLengthString(buffer, xuid);
     }
 
     @Override
@@ -63,10 +73,13 @@ public class McpeText implements NetworkPackage {
 
     public enum TextType {
         RAW,
-        SOURCE,
-        TRANSLATE,
+        CHAT,
+        TRANSLATION,
         POPUP,
+        JUKEBOX_POPUP,
         TIP,
-        SYSTEM
+        SYSTEM,
+        WHISPER,
+        ANNOUNCEMENT
     }
 }

@@ -27,6 +27,7 @@ import gnu.trove.set.TLongSet;
 import gnu.trove.set.hash.TLongHashSet;
 import io.netty.buffer.Unpooled;
 import lombok.Synchronized;
+import lombok.extern.log4j.Log4j2;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -37,6 +38,7 @@ import java.util.*;
  * This class stores chunk data in sections of 16x16x16 sections, with each section eventually representing a 16x128x16
  * chunk.
  */
+@Log4j2
 public class SectionedChunk extends SectionedChunkSnapshot implements Chunk, FullChunkPacketCreator {
     private final Level level;
     private final TIntObjectMap<CompoundTag> serializedBlockEntities = new TIntObjectHashMap<>();
@@ -223,7 +225,7 @@ public class SectionedChunk extends SectionedChunkSnapshot implements Chunk, Ful
             }
         }
 
-        int bufferSize = 1 + 10241 * topBlank + 768 + 2 + nbtSize;
+        int bufferSize = 1 + 6145 * topBlank + 768 + 2 + nbtSize;
         ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
         buffer.put((byte) topBlank);
 
@@ -234,10 +236,10 @@ public class SectionedChunk extends SectionedChunkSnapshot implements Chunk, Ful
             if (section != null) {
                 buffer.put(section.getIds());
                 buffer.put(section.getData().getData());
-                buffer.put(section.getSkyLight().getData());
-                buffer.put(section.getBlockLight().getData());
+                //buffer.put(section.getSkyLight().getData());
+                //buffer.put(section.getBlockLight().getData());
             } else {
-                buffer.position(buffer.position() + 10240);
+                buffer.position(buffer.position() + 6144);
             }
         }
 

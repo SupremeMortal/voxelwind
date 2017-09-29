@@ -8,28 +8,22 @@ import io.netty.buffer.ByteBuf;
 import lombok.Data;
 
 @Data
-public class McpeContainerSetSlot implements NetworkPackage {
-    private byte windowId;
+public class McpeInventorySlot implements NetworkPackage {
+    private int inventoryId;
     private int slot;
-    private int hotbarSlot;
     private ItemStack stack;
-    private byte selectSlot;
 
     @Override
     public void decode(ByteBuf buffer) {
-        windowId = buffer.readByte();
+        inventoryId = Varints.decodeSigned(buffer);
         slot = Varints.decodeSigned(buffer);
-        hotbarSlot = Varints.decodeSigned(buffer);
         stack = McpeUtil.readItemStack(buffer);
-        selectSlot = buffer.readByte();
     }
 
     @Override
     public void encode(ByteBuf buffer) {
-        buffer.writeByte(windowId);
+        Varints.encodeSigned(buffer, inventoryId);
         Varints.encodeSigned(buffer, slot);
-        Varints.encodeSigned(buffer, hotbarSlot);
         McpeUtil.writeItemStack(buffer, stack);
-        buffer.writeByte(selectSlot);
     }
 }

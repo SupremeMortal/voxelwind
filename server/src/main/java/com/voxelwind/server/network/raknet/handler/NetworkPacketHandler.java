@@ -19,7 +19,7 @@ public interface NetworkPacketHandler {
 
     void handle(McpeContainerClose packet);
 
-    void handle(McpeContainerSetSlot packet);
+    void handle(McpeInventorySlot packet);
 
     void handle(McpeMobEquipment packet);
 
@@ -31,5 +31,5 @@ public interface NetworkPacketHandler {
 
     void handle(McpeResourcePackClientResponse packet);
 
-    void handle(McpeCommandStep packet);
+    void handle(McpeCommandRequest packet);
 }

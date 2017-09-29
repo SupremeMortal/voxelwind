@@ -59,7 +59,7 @@ public class VoxelwindBasePlayerInventory extends VoxelwindBaseInventory impleme
 
         if (sendToPlayer) {
             McpeMobEquipment equipmentForSelf = new McpeMobEquipment();
-            equipmentForSelf.setEntityId(0);
+            equipmentForSelf.setRuntimeEntityId(0);
             equipmentForSelf.setHotbarSlot((byte) hotbarSlot);
             equipmentForSelf.setInventorySlot((byte) (hotbarLinks[hotbarSlot] + 9)); // Corrected for the benefit of MCPE
             equipmentForSelf.setStack(getStackInHand().orElse(null));
@@ -67,7 +67,7 @@ public class VoxelwindBasePlayerInventory extends VoxelwindBaseInventory impleme
         }
 
         McpeMobEquipment equipmentForAll = new McpeMobEquipment();
-        equipmentForAll.setEntityId(session.getEntityId());
+        equipmentForAll.setRuntimeEntityId(session.getEntityId());
         equipmentForAll.setHotbarSlot((byte) hotbarSlot);
         equipmentForAll.setInventorySlot((byte) hotbarLinks[hotbarSlot]);
         equipmentForAll.setStack(getStackInHand().orElse(null));

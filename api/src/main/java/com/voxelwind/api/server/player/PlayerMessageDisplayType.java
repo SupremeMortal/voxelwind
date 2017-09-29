@@ -4,6 +4,7 @@ package com.voxelwind.api.server.player;
  * Specifies how a player's message should be displayed to the client.
  */
 public enum PlayerMessageDisplayType {
+    RAW,
     /**
      * The message should be displayed in chat.
      */

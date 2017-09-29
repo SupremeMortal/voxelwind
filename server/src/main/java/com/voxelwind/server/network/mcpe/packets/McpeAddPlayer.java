@@ -25,6 +25,13 @@ public class McpeAddPlayer implements NetworkPackage {
     private Rotation rotation;
     private ItemStack held = new VoxelwindItemStack(BlockTypes.AIR, 1, null);
     private final MetadataDictionary metadata = new MetadataDictionary();
+    private int flags;
+    private int userPermission;
+    private int actionPermissions;
+    private int permissionLevel;
+    private int customPermissions;
+    private long userId;
+    // private Links links; TODO
 
     @Override
     public void decode(ByteBuf buffer) {
@@ -42,5 +49,11 @@ public class McpeAddPlayer implements NetworkPackage {
         McpeUtil.writeRotation(buffer, rotation);
         McpeUtil.writeItemStack(buffer, held);
         metadata.writeTo(buffer);
+        Varints.encodeUnsigned(buffer, flags);
+        Varints.encodeUnsigned(buffer, userPermission);
+        Varints.encodeUnsigned(buffer, actionPermissions);
+        Varints.encodeUnsigned(buffer, permissionLevel);
+        Varints.encodeUnsigned(buffer, customPermissions);
+        Varints.encodeUnsigned(buffer, 0); // links, todo
     }
 }

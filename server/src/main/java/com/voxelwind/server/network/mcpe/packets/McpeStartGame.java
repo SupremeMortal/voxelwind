@@ -3,6 +3,7 @@ package com.voxelwind.server.network.mcpe.packets;
 import com.flowpowered.math.vector.Vector3f;
 import com.flowpowered.math.vector.Vector3i;
 import com.voxelwind.nbt.util.Varints;
+import com.voxelwind.server.game.level.util.Gamerule;
 import com.voxelwind.server.network.NetworkPackage;
 import com.voxelwind.server.network.mcpe.McpeUtil;
 import io.netty.buffer.ByteBuf;
@@ -27,14 +28,23 @@ public class McpeStartGame implements NetworkPackage {
     private boolean eduMode; // = null;
     private float rainLevel; // = null;
     private float lightingLevel; // = null;
+    private boolean multiplayer;
+    private boolean broadcastToLan;
+    private boolean broadcastToXbl;
     private boolean enableCommands; // = null;
     private boolean isTexturepacksRequired; // = null;
-    // private GameRules gameRules; // TODO
+    private Gamerule[] gameRules; // TODO
+    private boolean bonusChest;
+    private boolean mapEnabled;
+    private boolean trustPlayers;
+    private int permissionLevel;
+    private int gamePublishSettings;
     private String levelId; // = null;
     private String worldName; // = null;
-    private String premiumWorldTemplateId;
+    private String premiumWorldTemplateId = "";
     private boolean unknown0;
     private long currentTick;
+    private int enchantmentSeed;
 
     @Override
     public void decode(ByteBuf buffer) {
@@ -53,16 +63,43 @@ public class McpeStartGame implements NetworkPackage {
         Varints.encodeSigned(buffer, dimension);
         Varints.encodeSigned(buffer, generator);
         Varints.encodeSigned(buffer, worldGamemode);
-        Varints.encodeSigned(buffer, dimension);
+        Varints.encodeSigned(buffer, difficulty);
         McpeUtil.writeBlockCoords(buffer, worldSpawn);
         buffer.writeBoolean(hasAchievementsDisabled);
         Varints.encodeSigned(buffer, dayCycleStopTime);
         buffer.writeBoolean(eduMode);
         buffer.writeFloat(rainLevel);
         buffer.writeFloat(lightingLevel);
+        buffer.writeBoolean(multiplayer);
+        buffer.writeBoolean(broadcastToLan);
+        buffer.writeBoolean(broadcastToXbl);
         buffer.writeBoolean(enableCommands);
         buffer.writeBoolean(isTexturepacksRequired);
+        Varints.encodeUnsigned(buffer, gameRules.length);
+        for(Gamerule rule : gameRules){
+            McpeUtil.writeVarintLengthString(buffer, rule.getName());
+            Object value = rule.getValue();
+            if(value instanceof Boolean){
+                buffer.writeByte((byte) 1);
+                buffer.writeBoolean((Boolean) value);
+            }else if(value instanceof Integer){
+                buffer.writeByte((byte) 2);
+                Varints.encodeUnsigned(buffer, (int) value);
+            }else if(value instanceof Float){
+                buffer.writeByte((byte) 3);
+                McpeUtil.writeFloatLE(buffer, (float) value);
+            }
+        }
+        buffer.writeBoolean(bonusChest);
+        buffer.writeBoolean(mapEnabled);
+        buffer.writeBoolean(trustPlayers);
+        Varints.encodeSigned(buffer, permissionLevel);
+        Varints.encodeSigned(buffer, gamePublishSettings);
         McpeUtil.writeVarintLengthString(buffer, levelId);
         McpeUtil.writeVarintLengthString(buffer, worldName);
+        McpeUtil.writeVarintLengthString(buffer, premiumWorldTemplateId);
+        buffer.writeBoolean(unknown0);
+        buffer.writeLongLE(currentTick);
+        Varints.encodeSigned(buffer, enchantmentSeed);
     }
 }

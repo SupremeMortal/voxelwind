@@ -5,9 +5,12 @@ import com.voxelwind.server.network.NetworkPackage;
 import com.voxelwind.server.network.PacketRegistry;
 import com.voxelwind.server.network.PacketType;
 import com.voxelwind.server.network.mcpe.annotations.DisallowWrapping;
+import com.voxelwind.server.network.mcpe.packets.McpeFullChunkData;
 import com.voxelwind.server.network.mcpe.packets.McpeUnknown;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.PooledByteBufAllocator;
+import lombok.extern.log4j.Log4j2;
 import net.md_5.bungee.jni.zlib.BungeeZlib;
 
 import java.util.ArrayList;
@@ -16,6 +19,7 @@ import java.util.List;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 
+@Log4j2
 public class CompressionUtil {
     private static final ThreadLocal<BungeeZlib> inflaterLocal = new ThreadLocal<BungeeZlib>() {
         @Override
@@ -43,7 +47,6 @@ public class CompressionUtil {
         ByteBuf decompressed = null;
         try {
             decompressed = CompressionUtil.inflate(buffer);
-
             // Now process the decompressed result.
             while (decompressed.isReadable()) {
                 int length = (int) Varints.decodeUnsigned(decompressed);

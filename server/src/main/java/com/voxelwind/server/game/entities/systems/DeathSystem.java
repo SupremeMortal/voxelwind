@@ -14,8 +14,8 @@ public class DeathSystem implements SystemRunner {
             .expectComponent(Health.class)
             .runner(new DeathSystem(entity -> {
                 McpeEntityEvent event = new McpeEntityEvent();
-                event.setEntityId(entity.getEntityId());
-                event.setEvent((byte) 3);
+                event.setRuntimeEntityId(entity.getEntityId());
+                event.setEventId((byte) 3);
                 ((VoxelwindLevel) entity.getLevel()).getPacketManager().queuePacketForViewers(entity, event);
 
                 // Technically, the entity will live for one extra tick, but that shouldn't matter.

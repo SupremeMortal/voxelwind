@@ -11,13 +11,15 @@ import lombok.Data;
 @Data
 public class McpeAddEntity implements NetworkPackage {
     private long entityId;
+    private long runtimeEntityId;
     private int entityType;
     private Vector3f position;
     private Vector3f velocity;
     private float yaw;
     private float pitch;
-    private int modifiers;
+    private int modifiers; //TODO: Entity Attributes
     private final MetadataDictionary metadata = new MetadataDictionary();
+    // private Links link; TODO
 
     @Override
     public void decode(ByteBuf buffer) {
@@ -27,7 +29,7 @@ public class McpeAddEntity implements NetworkPackage {
     @Override
     public void encode(ByteBuf buffer) {
         Varints.encodeSignedLong(buffer, entityId);
-        Varints.encodeUnsigned(buffer, entityId);
+        Varints.encodeUnsigned(buffer, entityId); // runtimeEntityId
         Varints.encodeUnsigned(buffer, entityType);
         McpeUtil.writeVector3f(buffer, position);
         McpeUtil.writeVector3f(buffer, velocity);

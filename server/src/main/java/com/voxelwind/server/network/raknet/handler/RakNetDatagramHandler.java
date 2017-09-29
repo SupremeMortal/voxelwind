@@ -196,8 +196,8 @@ public class RakNetDatagramHandler extends SimpleChannelInboundHandler<Addressed
         if (netPackage instanceof McpeContainerClose) {
             session.getHandler().handle((McpeContainerClose) netPackage);
         }
-        if (netPackage instanceof McpeContainerSetSlot) {
-            session.getHandler().handle((McpeContainerSetSlot) netPackage);
+        if (netPackage instanceof McpeInventorySlot) {
+            session.getHandler().handle((McpeInventorySlot) netPackage);
         }
         if (netPackage instanceof McpeMobEquipment) {
             session.getHandler().handle((McpeMobEquipment) netPackage);
@@ -214,8 +214,8 @@ public class RakNetDatagramHandler extends SimpleChannelInboundHandler<Addressed
         if (netPackage instanceof McpeResourcePackClientResponse) {
             session.getHandler().handle((McpeResourcePackClientResponse) netPackage);
         }
-        if (netPackage instanceof McpeCommandStep) {
-            session.getHandler().handle((McpeCommandStep) netPackage);
+        if (netPackage instanceof McpeCommandRequest) {
+            session.getHandler().handle((McpeCommandRequest) netPackage);
         }
     }
 }

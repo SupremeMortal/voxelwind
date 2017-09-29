@@ -163,8 +163,8 @@ public class InitialNetworkPacketHandler implements NetworkPacketHandler {
     }
 
     @Override
-    public void handle(McpeContainerSetSlot packet) {
-        throw new IllegalStateException("Got unexpected McpeContainerSetSlot");
+    public void handle(McpeInventorySlot packet) {
+        throw new IllegalStateException("Got unexpected McpeInventorySlot");
     }
 
     @Override
@@ -193,8 +193,8 @@ public class InitialNetworkPacketHandler implements NetworkPacketHandler {
     }
 
     @Override
-    public void handle(McpeCommandStep packet) {
-        throw new IllegalStateException("Got unexpected McpeCommandStep");
+    public void handle(McpeCommandRequest packet) {
+        throw new IllegalStateException("Got unexpected McpeCommandRequest");
     }
 
     private void startEncryptionHandshake(PublicKey key) throws Exception {

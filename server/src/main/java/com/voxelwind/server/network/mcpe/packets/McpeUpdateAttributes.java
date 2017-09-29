@@ -12,18 +12,18 @@ import java.util.Collection;
 
 @Data
 public class McpeUpdateAttributes implements NetworkPackage {
-    private long entityId;
+    private long runtimeEntityId;
     private final Collection<Attribute> attributes = new ArrayList<>();
 
     @Override
     public void decode(ByteBuf buffer) {
-        entityId = Varints.decodeUnsigned(buffer);
+        runtimeEntityId = Varints.decodeUnsigned(buffer);
         attributes.addAll(McpeUtil.readAttributes(buffer));
     }
 
     @Override
     public void encode(ByteBuf buffer) {
-        Varints.encodeUnsigned(buffer, entityId);
+        Varints.encodeUnsigned(buffer, runtimeEntityId);
         McpeUtil.writeAttributes(buffer, attributes);
     }
 }

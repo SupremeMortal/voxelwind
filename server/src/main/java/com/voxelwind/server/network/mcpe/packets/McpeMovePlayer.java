@@ -10,7 +10,7 @@ import lombok.Data;
 
 @Data
 public class McpeMovePlayer implements NetworkPackage {
-    private long entityId;
+    private long runtimeEntityId;
     private Vector3f position;
     private Rotation rotation;
     private byte mode;
@@ -19,7 +19,7 @@ public class McpeMovePlayer implements NetworkPackage {
 
     @Override
     public void decode(ByteBuf buffer) {
-        entityId = Varints.decodeUnsigned(buffer);
+        runtimeEntityId = Varints.decodeUnsigned(buffer);
         position = McpeUtil.readVector3f(buffer);
         rotation = McpeUtil.readByteRotation(buffer);
         mode = buffer.readByte();
@@ -29,7 +29,7 @@ public class McpeMovePlayer implements NetworkPackage {
 
     @Override
     public void encode(ByteBuf buffer) {
-        Varints.encodeUnsigned(buffer, entityId);
+        Varints.encodeUnsigned(buffer, runtimeEntityId);
         McpeUtil.writeVector3f(buffer, position);
         McpeUtil.writeByteRotation(buffer, rotation);
         buffer.writeByte(mode);
