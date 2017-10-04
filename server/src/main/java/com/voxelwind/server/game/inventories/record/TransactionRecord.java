@@ -1,4 +1,4 @@
-package com.voxelwind.server.game.inventories.transaction.record;
+package com.voxelwind.server.game.inventories.record;
 
 import com.voxelwind.api.game.item.ItemStack;
 import com.voxelwind.nbt.util.Varints;

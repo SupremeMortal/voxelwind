@@ -1,4 +1,4 @@
-package com.voxelwind.server.game.inventories.transaction.record;
+package com.voxelwind.server.game.inventories.record;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;

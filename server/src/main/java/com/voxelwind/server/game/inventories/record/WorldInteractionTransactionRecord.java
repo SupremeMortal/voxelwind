@@ -1,4 +1,4 @@
-package com.voxelwind.server.game.inventories.transaction.record;
+package com.voxelwind.server.game.inventories.record;
 
 import com.voxelwind.nbt.util.Varints;
 import io.netty.buffer.ByteBuf;

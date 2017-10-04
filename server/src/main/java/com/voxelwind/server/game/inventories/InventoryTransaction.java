@@ -1,9 +1,9 @@
-package com.voxelwind.server.game.inventories.transaction;
+package com.voxelwind.server.game.inventories;
 
 import com.flowpowered.math.vector.Vector3f;
 import com.flowpowered.math.vector.Vector3i;
 import com.voxelwind.api.game.item.ItemStack;
-import com.voxelwind.server.game.inventories.transaction.record.TransactionRecord;
+import com.voxelwind.server.game.inventories.record.TransactionRecord;
 import com.voxelwind.server.network.mcpe.packets.McpeInventoryTransaction;
 import lombok.Data;
 
@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Data
-public class Transaction {
+public class InventoryTransaction {
     private McpeInventoryTransaction.TransactionType transactionType;
     private final List<TransactionRecord> transactions = new ArrayList<>();
     private int actionType;
