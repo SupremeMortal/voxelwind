@@ -2,7 +2,6 @@ package com.voxelwind.server.network.mcpe.packets;
 
 import com.voxelwind.nbt.util.Varints;
 import com.voxelwind.server.game.inventories.record.*;
-import com.voxelwind.server.game.inventories.transaction.record.*;
 import com.voxelwind.server.network.NetworkPackage;
 import com.voxelwind.server.network.mcpe.McpeUtil;
 import com.voxelwind.server.game.inventories.InventoryTransaction;
