@@ -96,16 +96,13 @@ public class InitialNetworkPacketHandler implements NetworkPacketHandler {
 
         try {
             boolean trustedChain = validateChainData(certChainData);
-            if (!trustedChain && session.getServer().getConfiguration().getXboxAuthentication().isForceAuthentication()) {
+            if (!trustedChain) {
                 session.disconnect("This server requires that you sign in with Xbox Live.");
                 return;
             }
 
             JwtPayload payload = VoxelwindServer.MAPPER.convertValue(
                     getPayload(certChainData.get(certChainData.size() - 1).asText()), JwtPayload.class);
-            if (!trustedChain && payload.getExtraData().getXuid() != null) {
-                payload.getExtraData().setXuid(null); //fake
-            }
 
             session.setAuthenticationProfile(payload.getExtraData());
 
@@ -207,6 +204,7 @@ public class InitialNetworkPacketHandler implements NetworkPacketHandler {
         byte[] token = EncryptionUtil.generateRandomToken();
         byte[] serverKey = EncryptionUtil.getServerKey(serverKeyPair, key, token);
         session.enableEncryption(serverKey);
+        Thread.sleep(100); //We have give the server time to enable encryption otherwise the response will give an error.
         // Now send the packet to enable encryption on the client
         session.sendImmediatePackage(EncryptionUtil.createHandshakePacket(serverKeyPair, token));
     }
