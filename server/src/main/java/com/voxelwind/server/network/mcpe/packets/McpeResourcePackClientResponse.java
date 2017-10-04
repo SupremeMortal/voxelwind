@@ -20,4 +20,5 @@ public class McpeResourcePackClientResponse implements NetworkPackage {
     public void encode(ByteBuf buffer) {
 
     }
+
 }

@@ -4,6 +4,7 @@ import com.flowpowered.math.vector.Vector3f;
 import com.flowpowered.math.vector.Vector3i;
 import com.voxelwind.nbt.util.Varints;
 import com.voxelwind.server.game.level.util.Gamerule;
+import com.voxelwind.server.game.permissions.PermissionLevel;
 import com.voxelwind.server.network.NetworkPackage;
 import com.voxelwind.server.network.mcpe.McpeUtil;
 import io.netty.buffer.ByteBuf;
@@ -37,7 +38,7 @@ public class McpeStartGame implements NetworkPackage {
     private boolean bonusChest;
     private boolean mapEnabled;
     private boolean trustPlayers;
-    private int permissionLevel;
+    private PermissionLevel permissionLevel;
     private int gamePublishSettings;
     private String levelId; // = null;
     private String worldName; // = null;
@@ -93,7 +94,7 @@ public class McpeStartGame implements NetworkPackage {
         buffer.writeBoolean(bonusChest);
         buffer.writeBoolean(mapEnabled);
         buffer.writeBoolean(trustPlayers);
-        Varints.encodeSigned(buffer, permissionLevel);
+        Varints.encodeSigned(buffer, permissionLevel.ordinal());
         Varints.encodeSigned(buffer, gamePublishSettings);
         McpeUtil.writeVarintLengthString(buffer, levelId);
         McpeUtil.writeVarintLengthString(buffer, worldName);

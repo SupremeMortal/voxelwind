@@ -98,7 +98,7 @@ public class PacketRegistry {
         //MCPE_PACKETS[0x39] = McpePlayerInput.class;
         MCPE_PACKETS[0x3a] = McpeFullChunkData.class;
         MCPE_PACKETS[0x3b] = McpeSetCommandsEnabled.class;
-        //MCPE_PACKETS[0x3c] = McpeSetDifficulty.class;
+        MCPE_PACKETS[0x3c] = McpeSetDifficulty.class;
         MCPE_PACKETS[0x3d] = McpeChangeDimension.class;
         MCPE_PACKETS[0x3e] = McpeSetPlayerGameType.class;
         MCPE_PACKETS[0x3f] = McpePlayerList.class;

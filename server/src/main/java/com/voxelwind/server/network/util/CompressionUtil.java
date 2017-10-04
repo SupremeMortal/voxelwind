@@ -5,10 +5,8 @@ import com.voxelwind.server.network.NetworkPackage;
 import com.voxelwind.server.network.PacketRegistry;
 import com.voxelwind.server.network.PacketType;
 import com.voxelwind.server.network.mcpe.annotations.DisallowWrapping;
-import com.voxelwind.server.network.mcpe.packets.McpeFullChunkData;
 import com.voxelwind.server.network.mcpe.packets.McpeUnknown;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.PooledByteBufAllocator;
 import lombok.extern.log4j.Log4j2;
 import net.md_5.bungee.jni.zlib.BungeeZlib;
@@ -118,6 +116,8 @@ public class CompressionUtil {
      */
     public static ByteBuf inflate(ByteBuf buffer) throws DataFormatException {
         // Ensure that this buffer is direct.
+        if(buffer.readByte() != 0x78) throw new DataFormatException("No zlib header");
+        buffer.readerIndex(0);
         ByteBuf source = null;
         ByteBuf decompressed = PooledByteBufAllocator.DEFAULT.directBuffer();
 

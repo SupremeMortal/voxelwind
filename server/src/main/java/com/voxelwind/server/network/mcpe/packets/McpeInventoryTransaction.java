@@ -1,20 +1,21 @@
 package com.voxelwind.server.network.mcpe.packets;
 
 import com.voxelwind.nbt.util.Varints;
+import com.voxelwind.server.game.inventories.record.*;
 import com.voxelwind.server.game.inventories.transaction.record.*;
 import com.voxelwind.server.network.NetworkPackage;
 import com.voxelwind.server.network.mcpe.McpeUtil;
-import com.voxelwind.server.game.inventories.transaction.Transaction;
+import com.voxelwind.server.game.inventories.InventoryTransaction;
 import io.netty.buffer.ByteBuf;
 import lombok.Data;
 
 @Data
 public class McpeInventoryTransaction implements NetworkPackage{
-    private Transaction transaction;
+    private InventoryTransaction transaction;
 
     @Override
     public void decode(ByteBuf buffer) {
-        Transaction transaction = new Transaction();
+        InventoryTransaction transaction = new InventoryTransaction();
         TransactionType transactionType = TransactionType.values()[(int)Varints.decodeUnsigned(buffer)];
         transaction.setTransactionType(transactionType);
 
