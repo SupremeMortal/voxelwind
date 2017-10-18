@@ -20,6 +20,7 @@ import com.voxelwind.server.network.session.auth.JwtPayload;
 import com.voxelwind.server.network.session.auth.TemporarySession;
 import com.voxelwind.server.network.util.EncryptionUtil;
 import com.voxelwind.server.network.util.NativeCodeFactory;
+import io.netty.util.AsciiString;
 import lombok.extern.log4j.Log4j2;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -55,6 +56,11 @@ public class InitialNetworkPacketHandler implements NetworkPacketHandler {
     }
 
     @Override
+    public void handle(McpeSubClientLogin packet){
+        verifyLogin(packet.getChainData(), packet.getSkinData());
+    }
+
+    @Override
     public void handle(McpeLogin packet) {
         if (!VersionUtil.isCompatible(packet.getProtocolVersion())) {
             Optional<InetSocketAddress> address = session.getRemoteAddress();
@@ -81,47 +87,7 @@ public class InitialNetworkPacketHandler implements NetworkPacketHandler {
             return;
         }
 
-        JsonNode certData;
-        try {
-            certData = VoxelwindServer.MAPPER.readTree(packet.getChainData().toByteArray());
-        } catch (IOException e) {
-            throw new RuntimeException("Certificate JSON can not be read.");
-        }
-
-        // Verify the JWT chain data.
-        JsonNode certChainData = certData.get("chain");
-        if (certChainData.getNodeType() != JsonNodeType.ARRAY) {
-            throw new RuntimeException("Certificate data is not valid");
-        }
-
-        try {
-            boolean trustedChain = validateChainData(certChainData);
-            if (!trustedChain) {
-                session.disconnect("This server requires that you sign in with Xbox Live.");
-                return;
-            }
-
-            JwtPayload payload = VoxelwindServer.MAPPER.convertValue(
-                    getPayload(certChainData.get(certChainData.size() - 1).asText()), JwtPayload.class);
-
-            session.setAuthenticationProfile(payload.getExtraData());
-
-            // Get the key to use for verifying the client data and encrypting the connection
-            PublicKey key = generateKey(payload.getIdentityPublicKey());
-
-            // Set the client data.
-            ClientData clientData = getClientData(key, packet.getSkinData().toString());
-            session.setClientData(clientData);
-
-            if (CAN_USE_ENCRYPTION) {
-                startEncryptionHandshake(key);
-            } else {
-                initializePlayerSession();
-            }
-        } catch (Exception e) {
-            log.error("Unable to initialize player session", e);
-            session.disconnect("Internal server error");
-        }
+        verifyLogin(packet.getChainData(), packet.getSkinData());
     }
 
     @Override
@@ -132,6 +98,10 @@ public class InitialNetworkPacketHandler implements NetworkPacketHandler {
     @Override
     public void handle(McpeRequestChunkRadius packet) {
         throw new IllegalStateException("Got unexpected McpeRequestChunkRadius");
+    }
+    @Override
+    public void handle(McpeAdventureSettings packet) {
+        throw new IllegalStateException("Got unexpected McpeAdventureSettings");
     }
 
     @Override
@@ -170,18 +140,8 @@ public class InitialNetworkPacketHandler implements NetworkPacketHandler {
     }
 
     @Override
-    public void handle(McpeRemoveBlock packet) {
+    public void handle(McpeInventoryTransaction packet) {
         throw new IllegalStateException("Got unexpected McpeRemoveBlock");
-    }
-
-    @Override
-    public void handle(McpeUseItem packet) {
-        throw new IllegalStateException("Got unexpected McpeUseItem");
-    }
-
-    @Override
-    public void handle(McpeDropItem packet) {
-        throw new IllegalStateException("Got unexpected McpeDropItem");
     }
 
     @Override
@@ -194,6 +154,49 @@ public class InitialNetworkPacketHandler implements NetworkPacketHandler {
         throw new IllegalStateException("Got unexpected McpeCommandRequest");
     }
 
+    private void verifyLogin(AsciiString chainData, AsciiString skinData){
+        JsonNode certData;
+        try {
+            certData = VoxelwindServer.MAPPER.readTree(chainData.toByteArray());
+        } catch (IOException e) {
+            throw new RuntimeException("Certificate JSON can not be read.");
+        }
+
+        // Verify the JWT chain data.
+        JsonNode certChainData = certData.get("chain");
+        if (certChainData.getNodeType() != JsonNodeType.ARRAY) {
+            throw new RuntimeException("Certificate data is not valid");
+        }
+
+        try {
+            boolean trustedChain = validateChainData(certChainData);
+            if (!trustedChain) {
+                session.disconnect("This server requires that you sign in with Xbox Live.");
+                return;
+            }
+
+            JwtPayload payload = VoxelwindServer.MAPPER.convertValue(
+                    getPayload(certChainData.get(certChainData.size() - 1).asText()), JwtPayload.class);
+
+            session.setAuthenticationProfile(payload.getExtraData());
+
+            // Get the key to use for verifying the client data and encrypting the connection
+            PublicKey key = generateKey(payload.getIdentityPublicKey());
+
+            // Set the client data.
+            ClientData clientData = getClientData(key, skinData.toString());
+            session.setClientData(clientData);
+
+            if (CAN_USE_ENCRYPTION) {
+                startEncryptionHandshake(key);
+            } else {
+                initializePlayerSession();
+            }
+        } catch (Exception e) {
+            log.error("Unable to initialize player session", e);
+            session.disconnect("Internal server error");
+        }
+    }
     private void startEncryptionHandshake(PublicKey key) throws Exception {
         // Generate a fresh key for each session
         KeyPairGenerator generator = KeyPairGenerator.getInstance("EC");
@@ -204,7 +207,7 @@ public class InitialNetworkPacketHandler implements NetworkPacketHandler {
         byte[] token = EncryptionUtil.generateRandomToken();
         byte[] serverKey = EncryptionUtil.getServerKey(serverKeyPair, key, token);
         session.enableEncryption(serverKey);
-        Thread.sleep(100); //We have give the server time to enable encryption otherwise the response will give an error.
+
         // Now send the packet to enable encryption on the client
         session.sendImmediatePackage(EncryptionUtil.createHandshakePacket(serverKeyPair, token));
     }
