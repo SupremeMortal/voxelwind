@@ -19,7 +19,8 @@ import com.voxelwind.nbt.util.Varints;
 import com.voxelwind.server.game.item.VoxelwindItemStack;
 import com.voxelwind.server.game.item.VoxelwindItemStackBuilder;
 import com.voxelwind.server.game.item.VoxelwindNBTUtils;
-import com.voxelwind.server.game.level.util.Attribute;
+import com.voxelwind.server.game.level.util.EntityAttribute;
+import com.voxelwind.server.game.level.util.PlayerAttribute;
 import com.voxelwind.server.game.serializer.MetadataSerializer;
 import com.voxelwind.server.network.mcpe.util.ResourcePackInfo;
 import com.voxelwind.server.network.util.LittleEndianByteBufInputStream;
@@ -98,8 +99,24 @@ public class McpeUtil {
         return new Vector3f(x, y, z);
     }
 
-    public static Collection<Attribute> readAttributes(ByteBuf buf) {
-        List<Attribute> attributes = new ArrayList<>();
+    public static Collection<EntityAttribute> readEntityAttributes(ByteBuf buf) {
+        List<EntityAttribute> attributes = new ArrayList<>();
+        int size = (int) Varints.decodeUnsigned(buf);
+
+        for (int i = 0; i < size; i++) {
+            String name = readVarintLengthString(buf);
+            float min = readFloatLE(buf);
+            float max = readFloatLE(buf);
+            float val = readFloatLE(buf);
+
+            attributes.add(new EntityAttribute(name, min, max, val));
+        }
+
+        return attributes;
+    }
+
+    public static Collection<PlayerAttribute> readPlayerAttributes(ByteBuf buf) {
+        List<PlayerAttribute> attributes = new ArrayList<>();
         int size = (int) Varints.decodeUnsigned(buf);
 
         for (int i = 0; i < size; i++) {
@@ -109,7 +126,7 @@ public class McpeUtil {
             float defaultVal = readFloatLE(buf);
             String name = readVarintLengthString(buf);
 
-            attributes.add(new Attribute(name, min, max, val, defaultVal));
+            attributes.add(new PlayerAttribute(name, min, max, val, defaultVal));
         }
 
         return attributes;
@@ -123,9 +140,19 @@ public class McpeUtil {
         return Float.intBitsToFloat(buf.readIntLE());
     }
 
-    public static void writeAttributes(ByteBuf buf, Collection<Attribute> attributeList) {
+    public static void writeEntityAttributes(ByteBuf buf, Collection<EntityAttribute> attributeList) {
         Varints.encodeUnsigned(buf, attributeList.size());
-        for (Attribute attribute : attributeList) {
+        for (EntityAttribute attribute : attributeList) {
+            writeVarintLengthString(buf, attribute.getName());
+            writeFloatLE(buf, attribute.getMinimumValue());
+            writeFloatLE(buf, attribute.getMaximumValue());
+            writeFloatLE(buf, attribute.getValue());
+        }
+    }
+
+    public static void writePlayerAttributes(ByteBuf buf, Collection<PlayerAttribute> attributeList) {
+        Varints.encodeUnsigned(buf, attributeList.size());
+        for (PlayerAttribute attribute : attributeList) {
             writeFloatLE(buf, attribute.getMinimumValue());
             writeFloatLE(buf, attribute.getMaximumValue());
             writeFloatLE(buf, attribute.getValue());
