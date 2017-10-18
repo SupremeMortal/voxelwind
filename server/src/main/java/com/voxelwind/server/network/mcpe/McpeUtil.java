@@ -135,10 +135,15 @@ public class McpeUtil {
     }
 
     public static void writeSkin(ByteBuf buf, Skin skin) {
-        byte[] texture = skin.getTexture();
-        writeVarintLengthString(buf, skin.getType());
-        Varints.encodeUnsigned(buf, texture.length);
-        buf.writeBytes(texture);
+        byte[] skinData = skin.getSkinData();
+        byte[] capeData = skin.getCapeData();
+        writeVarintLengthString(buf, skin.getSkinId());
+        Varints.encodeUnsigned(buf, skinData.length);
+        buf.writeBytes(skinData);
+        Varints.encodeUnsigned(buf, capeData.length);
+        buf.writeBytes(capeData);
+        writeVarintLengthString(buf, skin.getGeometryName());
+        writeVarintLengthString(buf, skin.getGeometryData());
     }
 
     public static TranslatedMessage readTranslatedMessage(ByteBuf buf) {
@@ -161,12 +166,13 @@ public class McpeUtil {
 
     public static ItemStack readItemStack(ByteBuf buf) {
         int id = Varints.decodeSigned(buf);
-        if (id == 0) {
+        if (id <= 0) {
             return new VoxelwindItemStack(BlockTypes.AIR, 1, null);
         }
 
         int aux = Varints.decodeSigned(buf);
-        int damage = aux >> 8;
+        short damage = (short) (aux >> 8);
+        if (damage == Short.MAX_VALUE) damage = -1;
         int count = aux & 0xff;
         short nbtSize = buf.readShortLE();
 
@@ -174,7 +180,7 @@ public class McpeUtil {
 
         ItemStackBuilder builder = new VoxelwindItemStackBuilder()
                 .itemType(type)
-                .itemData(MetadataSerializer.deserializeMetadata(type, (short) damage))
+                .itemData(MetadataSerializer.deserializeMetadata(type, damage))
                 .amount(count);
 
         if (nbtSize > 0) {
@@ -187,6 +193,16 @@ public class McpeUtil {
                 throw new IllegalStateException("Unable to load NBT data", e);
             }
         }
+
+        int canPlace = Varints.decodeSigned(buf);
+        for (int i = 0; i < canPlace; i++) {
+            McpeUtil.readVarintLengthString(buf);
+        }
+
+        int canBreak = Varints.decodeSigned(buf);
+        for (int i = 0; i < canBreak; i++) {
+            McpeUtil.readVarintLengthString(buf);
+        }
         return builder.build();
     }
 
@@ -198,6 +214,7 @@ public class McpeUtil {
 
         Varints.encodeSigned(buf, stack.getItemType().getId());
         short metadataValue = MetadataSerializer.serializeMetadata(stack);
+        if (metadataValue == -1) metadataValue = Short.MAX_VALUE;
         Varints.encodeSigned(buf, (metadataValue << 8) | stack.getAmount());
 
         // Remember this position, since we'll be writing the true NBT size here later:
@@ -216,6 +233,8 @@ public class McpeUtil {
             // Set to the written NBT size
             buf.setShortLE(sizeIndex, buf.writerIndex() - afterSizeIndex);
         }
+        Varints.encodeSigned(buf, 0); // can place
+        Varints.encodeSigned(buf, 0); // can break
     }
 
     public static UUID readUuid(ByteBuf buf) {
@@ -228,29 +247,29 @@ public class McpeUtil {
     }
 
     public static Rotation readRotation(ByteBuf buffer) {
+        float pitch = readFloatLE(buffer);
         float yaw = readFloatLE(buffer);
         float headYaw = readFloatLE(buffer);
-        float pitch = readFloatLE(buffer);
         return new Rotation(pitch, yaw, headYaw);
     }
 
     public static void writeRotation(ByteBuf buffer, Rotation rotation) {
+        writeFloatLE(buffer, rotation.getPitch());
         writeFloatLE(buffer, rotation.getYaw());
         writeFloatLE(buffer, rotation.getHeadYaw());
-        writeFloatLE(buffer, rotation.getPitch());
     }
 
     public static Rotation readByteRotation(ByteBuf buf) {
         byte pitchByte = buf.readByte();
-        byte yawByte = buf.readByte();
         byte headYawByte = buf.readByte();
+        byte yawByte = buf.readByte();
         return new Rotation(rotationByteToAngle(pitchByte), rotationByteToAngle(yawByte), rotationByteToAngle(headYawByte));
     }
 
     public static void writeByteRotation(ByteBuf buf, Rotation rotation) {
         buf.writeByte(rotationAngleToByte(rotation.getPitch()));
-        buf.writeByte(rotationAngleToByte(rotation.getYaw()));
         buf.writeByte(rotationAngleToByte(rotation.getHeadYaw()));
+        buf.writeByte(rotationAngleToByte(rotation.getYaw()));
     }
 
     private static byte rotationAngleToByte(float angle) {
