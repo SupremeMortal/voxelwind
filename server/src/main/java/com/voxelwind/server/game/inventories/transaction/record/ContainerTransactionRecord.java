@@ -1,4 +1,4 @@
-package com.voxelwind.server.game.inventories.record;
+package com.voxelwind.server.game.inventories.transaction.record;
 
 import com.voxelwind.nbt.util.Varints;
 import io.netty.buffer.ByteBuf;
@@ -7,18 +7,18 @@ import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode(callSuper = false)
 @Data
-public class CreativeTransactionRecord extends TransactionRecord{
+public class ContainerTransactionRecord extends TransactionRecord{
     private int inventoryId;
 
     @Override
     public void write(ByteBuf buffer){
-        Varints.encodeUnsigned(buffer, inventoryId);
+        Varints.encodeSigned(buffer, inventoryId);
         super.write(buffer);
     }
 
     @Override
     public void read(ByteBuf buffer){
-        inventoryId = 0x79; //(int) Varints.decodeUnsigned(buffer);
+        inventoryId = Varints.decodeSigned(buffer);
         super.read(buffer);
     }
 }
