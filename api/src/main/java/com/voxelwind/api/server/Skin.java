@@ -15,9 +15,15 @@ import java.awt.image.BufferedImage;
 @Nonnull
 public class Skin {
     @NonNull
-    private final String type;
+    private final String skinId;
     @NonNull
-    private final byte[] texture;
+    private final byte[] skinData;
+    @NonNull
+    private final byte[] capeData;
+    @NonNull
+    private final String geometryName;
+    @NonNull
+    private final String geometryData;
 
     @Nonnull
     @ParametersAreNonnullByDefault
@@ -38,6 +44,6 @@ public class Skin {
             }
         }
 
-        return new Skin("Standard_Custom", mcpeTexture);
+        return new Skin("Standard_Custom", mcpeTexture, null, "geometry.humanoid.custom", null);
     }
 }

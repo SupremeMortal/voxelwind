@@ -201,6 +201,7 @@ public class BaseEntity implements Entity {
     protected long getFlagValue() {
         BitSet set = new BitSet(64);
         // Fill with values
+        set.set(DATA_FLAGS_AFFECTED_BY_GRAVITY, true); // Not implemented but we need gravity.
         set.set(DATA_FLAGS_ON_FIRE, false); // Not implemented
         set.set(DATA_FLAGS_SNEAKING, sneaking); // Sneaking
         set.set(DATA_FLAGS_RIDING, false); // Riding (not implemented)
@@ -233,6 +234,7 @@ public class BaseEntity implements Entity {
 
         McpeAddEntity packet = new McpeAddEntity();
         packet.setEntityId(getEntityId());
+        packet.setRuntimeEntityId(getEntityId());
         packet.setEntityType(data.getType());
         packet.setPosition(getGamePosition());
         packet.setVelocity(getMotion());

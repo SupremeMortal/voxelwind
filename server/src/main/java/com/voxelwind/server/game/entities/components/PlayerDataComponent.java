@@ -22,7 +22,13 @@ public class PlayerDataComponent implements PlayerData {
     private volatile float exhaustion = 4f;
 
     public PlayerDataComponent(PlayerSession player) {
-        this.skin = new Skin(player.getMcpeSession().getClientData().getSkinId(), player.getMcpeSession().getClientData().getSkinData());
+        this.skin = new Skin(
+                player.getMcpeSession().getClientData().getSkinId(),
+                player.getMcpeSession().getClientData().getSkinData(),
+                player.getMcpeSession().getClientData().getCapeData(),
+                player.getMcpeSession().getClientData().getSkinGeometryName(),
+                player.getMcpeSession().getClientData().getSkinGeometry()
+        );
     }
 
     @Override

@@ -15,6 +15,7 @@ import gnu.trove.iterator.TLongObjectIterator;
 import gnu.trove.map.TLongObjectMap;
 import gnu.trove.map.hash.TLongObjectHashMap;
 import lombok.extern.log4j.Log4j2;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -110,7 +111,7 @@ public class LevelEntityManager {
                         level.getPacketManager().queuePacketForViewers(entity, moveEntityPacket);
 
                         McpeSetEntityMotion motionPacket = new McpeSetEntityMotion();
-                        motionPacket.setEntityId(entity.getEntityId());
+                        motionPacket.setRuntimeEntityId(entity.getEntityId());
                         motionPacket.setMotion(entity.getMotion());
                         level.getPacketManager().queuePacketForViewers(entity, motionPacket);
 

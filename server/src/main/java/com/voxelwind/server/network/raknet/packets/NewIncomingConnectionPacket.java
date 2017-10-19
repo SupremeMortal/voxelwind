@@ -17,8 +17,8 @@ public class NewIncomingConnectionPacket implements NetworkPackage {
     @Override
     public void decode(ByteBuf buffer) {
         clientAddress = RakNetUtil.readSocketAddress(buffer);
-        systemAddresses = new InetSocketAddress[10];
-        for (int i = 0; i < 10; i++) {
+        systemAddresses = new InetSocketAddress[20];
+        for (int i = 0; i < 20; i++) {
             systemAddresses[i] = RakNetUtil.readSocketAddress(buffer);
         }
         clientTimestamp = buffer.readLong();

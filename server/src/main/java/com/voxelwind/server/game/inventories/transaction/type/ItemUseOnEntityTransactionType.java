@@ -6,7 +6,7 @@ import io.netty.buffer.ByteBuf;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-@EqualsAndHashCode(callSuper = false)
+@EqualsAndHashCode(callSuper = true)
 @Data
 public class ItemUseOnEntityTransactionType extends TransactionType {
     private static final McpeInventoryTransaction.Type type = McpeInventoryTransaction.Type.ITEM_USE_ON_ENTITY;

@@ -29,10 +29,8 @@ public class VersionUtil {
                 return "1.0.4";
             case 105:
                 return "1.0.5";
-            case 136:
-                return "1.2.0.31";
             case 137:
-                return "1.2.0.81";
+                return "1.2";
         }
         return null;
     }

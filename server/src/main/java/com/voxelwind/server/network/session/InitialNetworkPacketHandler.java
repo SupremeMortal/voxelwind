@@ -22,6 +22,7 @@ import com.voxelwind.server.network.util.EncryptionUtil;
 import com.voxelwind.server.network.util.NativeCodeFactory;
 import io.netty.util.AsciiString;
 import lombok.extern.log4j.Log4j2;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.*;
@@ -268,7 +269,7 @@ public class InitialNetworkPacketHandler implements NetworkPacketHandler {
         }
 
         JsonNode payload = getPayload(clientData);
-        log.debug("[CLIENT DATA] {}", payload.toString());
+
         return VoxelwindServer.MAPPER.convertValue(payload, ClientData.class);
     }
 

@@ -12,14 +12,14 @@ public class McpeAddHangingEntity implements NetworkPackage{
     private long entityId;
     private long runtimeEntityId;
     private Vector3i position;
-    private int unknown0;
+    private int direction;
 
 
     public void decode(ByteBuf buffer){
         entityId = Varints.decodeSignedLong(buffer);
         runtimeEntityId = Varints.decodeUnsigned(buffer);
         position = McpeUtil.readBlockCoords(buffer);
-        unknown0 = Varints.decodeSigned(buffer);
+        direction = Varints.decodeSigned(buffer);
     }
 
     @Override
@@ -27,6 +27,6 @@ public class McpeAddHangingEntity implements NetworkPackage{
         Varints.encodeSignedLong(buffer, entityId);
         Varints.encodeUnsigned(buffer, runtimeEntityId);
         McpeUtil.writeBlockCoords(buffer, position);
-        Varints.encodeSigned(buffer, unknown0);
+        Varints.encodeSigned(buffer, direction);
     }
 }

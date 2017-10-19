@@ -2,6 +2,7 @@ package com.voxelwind.server.network.session;
 
 import com.flowpowered.math.vector.Vector2i;
 import com.flowpowered.math.vector.Vector3f;
+import com.flowpowered.math.vector.Vector3i;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Verify;
 import com.spotify.futures.CompletableFutures;
@@ -17,10 +18,8 @@ import com.voxelwind.api.game.item.ItemStack;
 import com.voxelwind.api.game.level.Chunk;
 import com.voxelwind.api.game.level.Level;
 import com.voxelwind.api.game.level.block.Block;
-import com.voxelwind.api.game.level.block.BlockType;
 import com.voxelwind.api.game.level.block.BlockTypes;
 import com.voxelwind.api.game.util.TextFormat;
-import com.voxelwind.api.game.util.data.BlockFace;
 import com.voxelwind.api.server.Player;
 import com.voxelwind.api.server.command.CommandException;
 import com.voxelwind.api.server.command.CommandNotFoundException;
@@ -38,26 +37,28 @@ import com.voxelwind.server.game.entities.EntityTypeData;
 import com.voxelwind.server.game.entities.LivingEntity;
 import com.voxelwind.server.game.entities.components.HealthComponent;
 import com.voxelwind.server.game.entities.components.PlayerDataComponent;
-import com.voxelwind.server.game.entities.misc.VoxelwindDroppedItem;
 import com.voxelwind.server.game.entities.systems.DeathSystem;
 import com.voxelwind.server.game.inventories.*;
+import com.voxelwind.server.game.inventories.transaction.InventoryTransaction;
+import com.voxelwind.server.game.inventories.transaction.type.ItemReleaseTransactionType;
+import com.voxelwind.server.game.inventories.transaction.type.ItemUseTransactionType;
 import com.voxelwind.server.game.level.VoxelwindLevel;
 import com.voxelwind.server.game.level.block.BasicBlockState;
 import com.voxelwind.server.game.level.block.BlockBehavior;
 import com.voxelwind.server.game.level.block.BlockBehaviors;
-import com.voxelwind.server.game.level.block.behaviors.BehaviorUtils;
 import com.voxelwind.server.game.level.chunk.util.FullChunkPacketCreator;
-import com.voxelwind.server.game.level.util.Attribute;
 import com.voxelwind.server.game.level.util.BoundingBox;
 import com.voxelwind.server.game.level.util.Gamerule;
-import com.voxelwind.server.game.permissions.ActionPermissions;
+import com.voxelwind.server.game.level.util.PlayerAttribute;
 import com.voxelwind.server.game.permissions.PermissionLevel;
 import com.voxelwind.server.network.NetworkPackage;
 import com.voxelwind.server.network.mcpe.packets.*;
+import com.voxelwind.server.network.mcpe.util.ActionPermissionFlag;
 import com.voxelwind.server.network.raknet.handler.NetworkPacketHandler;
 import gnu.trove.set.TLongSet;
 import gnu.trove.set.hash.TLongHashSet;
 import lombok.extern.log4j.Log4j2;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.InetSocketAddress;
@@ -65,8 +66,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static com.voxelwind.server.network.mcpe.packets.McpePlayerAction.*;
 
 @Log4j2
 public class PlayerSession extends LivingEntity implements Player, InventoryObserver, DeathSystem.CustomDeath {
@@ -81,7 +80,9 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
     private final VoxelwindServer vwServer;
     private final VoxelwindBasePlayerInventory playerInventory = new VoxelwindBasePlayerInventory(this);
     private final Set<UUID> playersSentForList = new HashSet<>();
+    private final List<Gamerule> gamerules = new ArrayList<>();
     private Inventory openedInventory;
+    private boolean flying;
 
     public PlayerSession(McpeSession session, VoxelwindLevel level) {
         super(EntityTypeData.PLAYER, level, level.getSpawnLocation(), session.getServer(), 20);
@@ -94,8 +95,8 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
     @Override
     public NetworkPackage createAddEntityPacket() {
         McpeAddPlayer addPlayer = new McpeAddPlayer();
-        addPlayer.setUuid(getUniqueId());
-        addPlayer.setUsername(getMcpeSession().getAuthenticationProfile().getDisplayName());
+        addPlayer.setUuid(session.getAuthenticationProfile().getIdentity());
+        addPlayer.setUsername(session.getAuthenticationProfile().getDisplayName());
         addPlayer.setEntityId(getEntityId());
         addPlayer.setRuntimeEntityId(getEntityId());
         addPlayer.setPosition(getPosition());
@@ -103,12 +104,12 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         addPlayer.setRotation(getRotation());
         addPlayer.setHeld(playerInventory.getStackInHand().orElse(null));
         addPlayer.getMetadata().putAll(getMetadata());
-        addPlayer.setFlags(0x20 | 0x100);
-        addPlayer.setUserPermission(1);
-        addPlayer.setActionPermissions(ActionPermissions.DEFAULT);
-        addPlayer.setPermissionLevel(PermissionLevel.MEMBER);
-        addPlayer.setCustomPermissions(1);
-        addPlayer.setUserId(session.getAuthenticationProfile().getXuid());
+        addPlayer.setFlags(0);
+        addPlayer.setCommandPermission(1);
+        addPlayer.setActionPermissions(ActionPermissionFlag.DEFAULT, true);
+        addPlayer.setPermissionLevel(PermissionLevel.OPERATOR);
+        addPlayer.setCustomPermissions(0);
+        addPlayer.setUserId(getEntityId());
         return addPlayer;
     }
 
@@ -168,14 +169,15 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
     private void sendAttributes() {
         Health healthComponent = ensureAndGet(Health.class);
         PlayerData playerDataComponent = ensureAndGet(PlayerData.class);
-        Attribute health = new Attribute("minecraft:health", 0f, healthComponent.getMaximumHealth(),
+        PlayerAttribute health = new PlayerAttribute("minecraft:health", 0f, healthComponent.getMaximumHealth(),
                 Math.max(0, healthComponent.getHealth()), healthComponent.getMaximumHealth());
-        Attribute hunger = new Attribute("minecraft:player.hunger", 0f, 20f, playerDataComponent.getHunger(), 20f); // TODO: Implement hunger
+        PlayerAttribute hunger = new PlayerAttribute("minecraft:player.hunger", 0f, 20f, playerDataComponent.getHunger(), 20f); // TODO: Implement hunger
         float effectiveSpeed = sprinting ? (float) Math.min(0.5f, playerDataComponent.getBaseSpeed() * 1.3) : playerDataComponent.getBaseSpeed();
-        Attribute speed = new Attribute("minecraft:movement", 0, 0.5f, effectiveSpeed, 0.1f);
+        PlayerAttribute speed = new PlayerAttribute("minecraft:movement", 0, 0.5f, effectiveSpeed, 0.1f);
         // TODO: Implement levels, movement speed, and absorption.
 
         McpeUpdateAttributes packet = new McpeUpdateAttributes();
+        packet.setRuntimeEntityId(getEntityId());
         packet.getAttributes().add(health);
         packet.getAttributes().add(hunger);
         packet.getAttributes().add(speed);
@@ -187,12 +189,16 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         movePlayerPacket.setRuntimeEntityId(getEntityId());
         movePlayerPacket.setPosition(getGamePosition());
         movePlayerPacket.setRotation(getRotation());
-        movePlayerPacket.setMode((byte) (isTeleported() ? 1 : 0));
+        movePlayerPacket.setMode((isTeleported() ? McpeMovePlayer.Mode.TELEPORT : McpeMovePlayer.Mode.NORMAL));
+        if (isTeleported()) {
+            movePlayerPacket.setTeleportationCause(McpeMovePlayer.TeleportationCause.UNKNOWN);
+        }
         movePlayerPacket.setOnGround(isOnGround());
+        movePlayerPacket.setRidingEntityId(0);
         session.addToSendQueue(movePlayerPacket);
     }
 
-    public void doInitialSpawn() {
+    private void doInitialSpawn() {
         log.info("{} ({}) has logged in.", getName(), getRemoteAddress().map(Object::toString).orElse("UNKNOWN"));
 
         // Fire PlayerSpawnEvent.
@@ -211,10 +217,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
 
         PlayerData playerDataComponent = ensureAndGet(PlayerData.class);
 
-        McpeSetTime setTime = new McpeSetTime();
-        setTime.setTime(getLevel().getTime());
-        session.addToSendQueue(setTime);
-
+        initializeGamerules();
         // Send packets to spawn the player
         McpeStartGame startGame = new McpeStartGame();
         startGame.setEntityId(getEntityId());
@@ -224,54 +227,60 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         startGame.setPitch(event.getRotation().getPitch());
         startGame.setYaw(event.getRotation().getYaw());
         startGame.setSeed((int)getLevel().getSeed());
-        startGame.setDimension((byte) 0);
+        startGame.setDimension(0);
         startGame.setGenerator(1);
-        startGame.setWorldGamemode((byte) 0);
+        startGame.setWorldGamemode(0);
         startGame.setDifficulty(1);
         startGame.setWorldSpawn(getLevel().getSpawnLocation().toInt());
         startGame.setHasAchievementsDisabled(true);
         startGame.setDayCycleStopTime(getLevel().getTime());
-        startGame.setEduMode(false);
-        startGame.setRainLevel(0);
-        startGame.setLightingLevel(0);
-        startGame.setEnableCommands(true);
-        startGame.setTexturepacksRequired(false);
-        startGame.setGameRules(getGameRules());
-        startGame.setLevelId("SECRET");
-        startGame.setWorldName(getLevel().getName());
+        startGame.setEduMode(getMcpeSession().getClientData().isEduMode());
+        startGame.setRainLevel(0F);
+        startGame.setLightingLevel(0F);
         startGame.setMultiplayer(true);
         startGame.setBroadcastToLan(true);
         startGame.setBroadcastToXbl(true);
+        startGame.setEnableCommands(false);
+        startGame.setTexturepacksRequired(false);
+        startGame.getGameRules().addAll(getGameRules());
+        startGame.setBonusChest(false);
+        startGame.setMapEnabled(false);
+        startGame.setTrustPlayers(false);
+        startGame.setPermissionLevel(PermissionLevel.CUSTOM);
         startGame.setGamePublishSettings(3);
-        startGame.setPermissionLevel(PermissionLevel.MEMBER);
-        startGame.setUnknown0(false);
+        startGame.setLevelId("SECRET");
+        startGame.setWorldName(getLevel().getName());
+        startGame.setPremiumWorldTemplateId("");
+        startGame.setTrial(false);
+        startGame.setCurrentTick(0);
+        startGame.setEnchantmentSeed(0);
         session.addToSendQueue(startGame);
 
+        McpeSetTime setTime = new McpeSetTime();
+        setTime.setTime(getLevel().getTime());
         session.addToSendQueue(setTime);
-        McpeSetDifficulty difficulty = new McpeSetDifficulty();
-        difficulty.setDifficulty(1);
-        session.addToSendQueue(difficulty);
-
-        McpeSetCommandsEnabled commandsEnabled = new McpeSetCommandsEnabled();
-        commandsEnabled.setEnabled(true);
-        session.addToSendQueue(commandsEnabled);
 
         McpeAdventureSettings settings = new McpeAdventureSettings();
-        int flags = 0x20 | 0x100; //TODO: Implement flags.
-        settings.setFlags(flags);
-        settings.setUserId(getEntityId());
+        settings.setFlags(McpeAdventureSettings.Flag.ALLOW_FLIGHT, false);
+        settings.setFlags(McpeAdventureSettings.Flag.FLYING, false);
+        settings.setFlags(McpeAdventureSettings.Flag.NO_CLIP, false);
+        settings.setFlags(McpeAdventureSettings.Flag.AUTO_JUMP, false);
+        settings.setFlags(McpeAdventureSettings.Flag.IMMUTABLE_WORLD, false);
+        settings.setFlags(McpeAdventureSettings.Flag.MUTED, false);
+        settings.setFlags(McpeAdventureSettings.Flag.WORLD_BUILDER, true);
+        settings.setFlags(McpeAdventureSettings.Flag.NO_PVP, false);
+        settings.setFlags(McpeAdventureSettings.Flag.NO_MVP, false);
+        settings.setFlags(McpeAdventureSettings.Flag.NO_PVM, false);
         settings.setCommandPermissions(1);
-        settings.setPermissionLevel(PermissionLevel.MEMBER);
-        settings.setActionPermissions(ActionPermissions.DEFAULT);
+        settings.setPermissionLevel(PermissionLevel.OPERATOR);
+        settings.setCustomStoredPermissions(0);
+        settings.setActionPermissions(ActionPermissionFlag.DEFAULT, true);
+        settings.setUserId(getEntityId());
+
         session.addToSendQueue(settings);
 
-        McpeSetSpawnPosition spawnPosition = new McpeSetSpawnPosition();
-        spawnPosition.setSpawnType(McpeSetSpawnPosition.SpawnType.PLAYER_SPAWN);
-        spawnPosition.setPosition(getLevel().getSpawnLocation().toInt());
-        spawnPosition.setSpawnForced(false);
-        session.addToSendQueue(spawnPosition);
-
-        sendMovePlayerPacket();
+        sendAttributes();
+        sendPlayerInventory();
     }
 
     public McpeSession getMcpeSession() {
@@ -311,24 +320,32 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         return CompletableFutures.allAsList(completableFutures);
     }
 
-    private Gamerule[] getGameRules(){
-        Gamerule[] rules = new Gamerule[15]; //TODO: Implement this better
-        rules[0] = new Gamerule<>("drowningdamage", true);
-        rules[1] = new Gamerule<>("dotiledrops", true);
-        rules[2] = new Gamerule<>("commandblockoutput", true);
-        rules[3] = new Gamerule<>("domobloot", true);
-        rules[4] = new Gamerule<>("dodaylightcycle", true);
-        rules[5] = new Gamerule<>("keepinventory", false);
-        rules[6] = new Gamerule<>("domobspawning", true);
-        rules[7] = new Gamerule<>("doentitydrops", true);
-        rules[8] = new Gamerule<>("dofiretick", true);
-        rules[9] = new Gamerule<>("doweathercycle", true);
-        rules[10] = new Gamerule<>("falldamage", true);
-        rules[11] = new Gamerule<>("pvp", true);
-        rules[12] = new Gamerule<>("firedamage", true);
-        rules[13] = new Gamerule<>("mobgriefing", true);
-        rules[14] = new Gamerule<>("sendcommandfeedback", true);
-        return rules;
+    private void initializeGamerules() {
+        gamerules.add(new Gamerule<>("drowningdamage", true));
+        gamerules.add(new Gamerule<>("dotiledrops", true));
+        gamerules.add(new Gamerule<>("commandblockoutput", true));
+        gamerules.add(new Gamerule<>("domobloot", true));
+        gamerules.add(new Gamerule<>("dodaylightcycle", true));
+        gamerules.add(new Gamerule<>("keepinventory", false));
+        gamerules.add(new Gamerule<>("domobspawning", true));
+        gamerules.add(new Gamerule<>("doentitydrops", true));
+        gamerules.add(new Gamerule<>("dofiretick", true));
+        gamerules.add(new Gamerule<>("doweathercycle", true));
+        gamerules.add(new Gamerule<>("falldamage", true));
+        gamerules.add(new Gamerule<>("pvp", true));
+        gamerules.add(new Gamerule<>("firedamage", true));
+        gamerules.add(new Gamerule<>("mobgriefing", true));
+        gamerules.add(new Gamerule<>("sendcommandfeedback", true));
+        gamerules.add(new Gamerule<>("showcoordinates", true));
+        gamerules.add(new Gamerule<>("donaturalregeneration", true));
+        if (!getMcpeSession().getClientData().isEduMode()) return; // No point in sending useless gamerules.
+        gamerules.add(new Gamerule<>("globalmute", false));
+        gamerules.add(new Gamerule<>("allowdestructiveobjects", true));
+        gamerules.add(new Gamerule<>("allowmobs", true));
+    }
+
+    public List<Gamerule> getGameRules() {
+        return gamerules;
     }
 
     @Override
@@ -459,7 +476,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                 break;
         }
         text.setMessage(message);
-        text.setXuid(Long.toString(getXuid().getAsLong()));
+        text.setXuid(Long.toString(session.getAuthenticationProfile().getXuid()));
         session.addToSendQueue(text);
     }
 
@@ -562,6 +579,45 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         }
     }
 
+    private void breakBlock(Vector3i position) {
+        PlayerData playerData = ensureAndGet(PlayerData.class);
+        int chunkX = position.getX() >> 4;
+        int chunkZ = position.getZ() >> 4;
+
+        Optional<Chunk> chunkOptional = getLevel().getChunkIfLoaded(chunkX, chunkZ);
+        if (!chunkOptional.isPresent()) {
+            // Chunk not loaded, danger ahead!
+            log.error("{} tried to remove block at unloaded chunk ({}, {})", getName(), chunkX, chunkZ);
+            return;
+        }
+
+        int inChunkX = position.getX() & 0x0f;
+        int inChunkZ = position.getZ() & 0x0f;
+
+        Block block = chunkOptional.get().getBlock(inChunkX, position.getY(), inChunkZ);
+        // Call BlockReplaceEvent.
+        BlockReplaceEvent event = new BlockReplaceEvent(block, block.getBlockState(), new BasicBlockState(BlockTypes.AIR, null, null),
+                PlayerSession.this, BlockReplaceEvent.ReplaceReason.PLAYER_BREAK);
+        getServer().getEventManager().fire(event);
+        if (event.getResult() == BlockReplaceEvent.Result.CONTINUE) {
+            if (playerData.getGameMode() != GameMode.CREATIVE) {
+                BlockBehavior blockBehavior = BlockBehaviors.getBlockBehavior(block.getBlockState().getBlockType());
+                if (!blockBehavior.handleBreak(getServer(), PlayerSession.this, block, playerInventory.getStackInHand().orElse(null))) {
+                    Collection<ItemStack> drops = blockBehavior.getDrops(getServer(), PlayerSession.this, block, playerInventory.getStackInHand().orElse(null));
+                    for (ItemStack drop : drops) {
+                        DroppedItem item = getLevel().dropItem(drop, block.getLevelLocation().toFloat().add(0.5, 0.5, 0.5));
+                        item.ensureAndGet(PickupDelay.class).setDelayPickupTicks(5);
+                    }
+                    chunkOptional.get().setBlock(inChunkX, position.getY(), inChunkZ, new BasicBlockState(BlockTypes.AIR, null, null));
+                }
+            } else {
+                chunkOptional.get().setBlock(inChunkX, position.getY(), inChunkZ, new BasicBlockState(BlockTypes.AIR, null, null));
+            }
+        }
+
+        getLevel().broadcastBlockUpdate(position);
+    }
+
     @Override
     public void onInventoryContentsReplacement(ItemStack[] newItems, VoxelwindBaseInventory inventory) {
         byte windowId;
@@ -582,35 +638,51 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         session.addToSendQueue(contentsWrapper);
     }
 
+    private void broadcastSetEntityData() {
+        McpeSetEntityData dataPacket = new McpeSetEntityData();
+        dataPacket.setRuntimeEntityId(getEntityId());
+        dataPacket.getMetadata().put(0, getFlagValue());
+        getLevel().getPacketManager().queuePacketForViewers(PlayerSession.this, dataPacket);
+    }
+
+    private void sendSetEntityData() {
+        McpeSetEntityData dataPacket = new McpeSetEntityData();
+        dataPacket.setRuntimeEntityId(getEntityId());
+        dataPacket.getMetadata().putAll(getMetadata());
+        session.sendImmediatePackage(dataPacket);
+    }
+
     private void sendPlayerInventory() {
-        McpeWrapper inventoryWrapper = new McpeWrapper();
-
         McpeInventoryContent initContents = new McpeInventoryContent();
-        initContents.setInventoryId((byte) 0x7b);
-        initContents.setStacks(new ItemStack[9]);
-
-        inventoryWrapper.getPackets().add(initContents);
+        initContents.setInventoryId(0x7b);
+        initContents.setStacks(new ItemStack[]{});
+        session.addToSendQueue(initContents);
 
         // Because MCPE is stupid, we have to add 9 more slots. The rest will be filled in as air.
         McpeInventoryContent inventoryContents = new McpeInventoryContent();
-        inventoryContents.setInventoryId((byte) 0x00);
+        inventoryContents.setInventoryId(0x00);
         inventoryContents.setStacks(Arrays.copyOf(playerInventory.getAllContents(), playerInventory.getInventoryType().getInventorySize() + 9));
 
-        inventoryWrapper.getPackets().add(inventoryContents);
+        session.addToSendQueue(inventoryContents);
 
-        McpeInventoryContent armorContents = new McpeInventoryContent();
-        armorContents.setInventoryId((byte) 0x78);
-        armorContents.setStacks(new ItemStack[4]);
+        ArmorEquipment armorEquipment = ensureAndGet(ArmorEquipment.class);
+        McpeInventoryContent armorContent = new McpeInventoryContent();
+        armorContent.setInventoryId(0x78);
+        armorContent.setStacks(new ItemStack[]{
+                armorEquipment.getHelmet().orElse(null),
+                armorEquipment.getChestplate().orElse(null),
+                armorEquipment.getLeggings().orElse(null),
+                armorEquipment.getBoots().orElse(null),
+        });
 
-        inventoryWrapper.getPackets().add(armorContents);
+        session.addToSendQueue(armorContent);
 
         McpeMobEquipment mobEquipment = new McpeMobEquipment();
         mobEquipment.setRuntimeEntityId(getEntityId());
-        mobEquipment.setHotbarSlot((byte) 0);
-        mobEquipment.setStack(playerInventory.getStackInHand().get());
+        mobEquipment.setStack(getInventory().getStackInHand().orElse(null));
+        mobEquipment.setInventorySlot((byte) getInventory().getHeldInventorySlot());
 
-        inventoryWrapper.getPackets().add(mobEquipment);
-        session.sendImmediatePackage(inventoryContents);
+        session.addToSendQueue(mobEquipment);
     }
 
     @Override
@@ -689,6 +761,11 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         }
 
         @Override
+        public void handle(McpeSubClientLogin packet) {
+            throw new IllegalStateException("Login packet received but player session is currently active!");
+        }
+
+        @Override
         public void handle(McpeClientToServerHandshake packet) {
             throw new IllegalStateException("Client packet received but player session is currently active!");
         }
@@ -704,26 +781,18 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
             CompletableFuture<List<Chunk>> sendChunksFuture = sendNewChunks();
             sendChunksFuture.whenComplete((chunks, throwable) -> {
                 if (!spawned) {
-
-                    McpeSetEntityData entityData = new McpeSetEntityData();
-                    entityData.setEntityId(getEntityId());
-                    entityData.getMetadata().putAll(getMetadata());
-
-                    session.sendImmediatePackage(entityData);
-
-                    McpeSetTime setTime = new McpeSetTime();
-                    setTime.setTime(getLevel().getTime());
-                    session.sendImmediatePackage(setTime);
+                    sendSetEntityData();
 
                     McpePlayStatus status = new McpePlayStatus();
                     status.setStatus(McpePlayStatus.Status.PLAYER_SPAWN);
                     session.sendImmediatePackage(status);
 
-                    spawned = true;
+                    McpeSetTime setTime = new McpeSetTime();
+                    setTime.setTime(getLevel().getTime());
+                    session.sendImmediatePackage(setTime);
 
                     updateViewableEntities();
-                    sendAttributes();
-                    sendPlayerInventory();
+                    sendMovePlayerPacket();
                     updatePlayerList();
 
                     /*McpeAvailableCommands availableCommands = ((VoxelwindCommandManager) vwServer.getCommandManager())
@@ -733,6 +802,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                     availableCommandsWrapper.getPackets().add(availableCommands);
                     session.sendImmediatePackage(availableCommandsWrapper);*/
 
+                    spawned = true;
 
                     log.info("{} ({}) has been spawned at {} ({})", getName(), getRemoteAddress().map(Object::toString).orElse("UNKNOWN"),
                             getPosition(), getLevel().getName());
@@ -746,22 +816,22 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         @Override
         public void handle(McpePlayerAction packet) {
             switch (packet.getAction()) {
-                case ACTION_START_BREAK:
+                case START_BREAK:
                     // Fire interact
                     break;
-                case ACTION_ABORT_BREAK:
+                case ABORT_BREAK:
                     // No-op
                     break;
-                case ACTION_STOP_BREAK:
+                case STOP_BREAK:
                     // No-op
                     break;
-                case ACTION_RELEASE_ITEM:
+                case DROP_ITEM:
                     // Drop item, shoot bow, or dump bucket?
                     break;
-                case ACTION_STOP_SLEEPING:
+                case STOP_SLEEPING:
                     // Stop sleeping
                     break;
-                case ACTION_RESPAWN:
+                case RESPAWN:
                     // Clean up attributes?
                     Health health = ensureAndGet(Health.class);
                     if (!(spawned && health.isDead())) {
@@ -780,30 +850,30 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                     respawn.setPosition(getLevel().getSpawnLocation());
                     session.addToSendQueue(respawn);
                     break;
-                case ACTION_JUMP:
+                case JUMP:
                     // No-op
                     break;
-                case ACTION_START_SPRINT:
+                case START_SPRINT:
                     sprinting = true;
                     sendAttributes();
                     break;
-                case ACTION_STOP_SPRINT:
+                case STOP_SPRINT:
                     sprinting = false;
                     sendAttributes();
                     break;
-                case ACTION_START_SNEAK:
+                case START_SNEAK:
                     sneaking = true;
                     sendAttributes();
                     break;
-                case ACTION_STOP_SNEAK:
+                case STOP_SNEAK:
                     sneaking = false;
                     sendAttributes();
                     break;
+                case BREAKING:
+                    // In process of breaking block.
+                    break;
             }
-
-            McpeSetEntityData dataPacket = new McpeSetEntityData();
-            dataPacket.getMetadata().put(0, getFlagValue());
-            getLevel().getPacketManager().queuePacketForViewers(PlayerSession.this, dataPacket);
+            broadcastSetEntityData();
         }
 
         @Override
@@ -859,7 +929,6 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
 
             setPosition(newPosition);
             setRotation(packet.getRotation());
-
             // If we haven't moved in the X or Z axis, don't update viewable entities or try updating chunks - they haven't changed.
             if (hasSubstantiallyMoved(originalPosition, newPosition)) {
                 updateViewableEntities();
@@ -947,54 +1016,8 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
             playerInventory.setHeldHotbarSlot(packet.getHotbarSlot(), false);
         }
 
-        @Override
-        public void handle(McpeRemoveBlock packet) {
-            Health health = ensureAndGet(Health.class);
-            PlayerData playerData = ensureAndGet(PlayerData.class);
-            if (!spawned || health.isDead()) {
-                return;
-            }
-
-            // TODO: Perform sanity checks and drop items.
-            int chunkX = packet.getPosition().getX() >> 4;
-            int chunkZ = packet.getPosition().getZ() >> 4;
-
-            Optional<Chunk> chunkOptional = getLevel().getChunkIfLoaded(chunkX, chunkZ);
-            if (!chunkOptional.isPresent()) {
-                // Chunk not loaded, danger ahead!
-                log.error("{} tried to remove block at unloaded chunk ({}, {})", getName(), chunkX, chunkZ);
-                return;
-            }
-
-            int inChunkX = packet.getPosition().getX() & 0x0f;
-            int inChunkZ = packet.getPosition().getZ() & 0x0f;
-
-            Block block = chunkOptional.get().getBlock(inChunkX, packet.getPosition().getY(), inChunkZ);
-            // Call BlockReplaceEvent.
-            BlockReplaceEvent event = new BlockReplaceEvent(block, block.getBlockState(), new BasicBlockState(BlockTypes.AIR, null, null),
-                    PlayerSession.this, BlockReplaceEvent.ReplaceReason.PLAYER_BREAK);
-            getServer().getEventManager().fire(event);
-            if (event.getResult() == BlockReplaceEvent.Result.CONTINUE) {
-                if (playerData.getGameMode() != GameMode.CREATIVE) {
-                    BlockBehavior blockBehavior = BlockBehaviors.getBlockBehavior(block.getBlockState().getBlockType());
-                    if (!blockBehavior.handleBreak(getServer(), PlayerSession.this, block, playerInventory.getStackInHand().orElse(null))) {
-                        Collection<ItemStack> drops = blockBehavior.getDrops(getServer(), PlayerSession.this, block, playerInventory.getStackInHand().orElse(null));
-                        for (ItemStack drop : drops) {
-                            DroppedItem item = getLevel().dropItem(drop, block.getLevelLocation().toFloat().add(0.5, 0.5, 0.5));
-                            item.ensureAndGet(PickupDelay.class).setDelayPickupTicks(5);
-                        }
-                        chunkOptional.get().setBlock(inChunkX, packet.getPosition().getY(), inChunkZ, new BasicBlockState(BlockTypes.AIR, null, null));
-                    }
-                } else {
-                    chunkOptional.get().setBlock(inChunkX, packet.getPosition().getY(), inChunkZ, new BasicBlockState(BlockTypes.AIR, null, null));
-                }
-            }
-
-            getLevel().broadcastBlockUpdate(packet.getPosition());
-        }
-
-        @Override
-        public void handle(McpeUseItem packet) {
+        /*@Override
+        public void handle(McpeUseItem packet) { TODO: move this over to InventoryTransaction (GOD PACKET)
             Health health = ensureAndGet(Health.class);
             if (!spawned || health.isDead()) {
                 return;
@@ -1052,9 +1075,60 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                         break;
                 }
             }
+        }*/
+
+        @Override
+        public void handle(McpeAdventureSettings packet) {
+            int flags = packet.getFlags();
+            flying = (flags & 0x200) == 0x200;
         }
 
         @Override
+        public void handle(McpeInventoryTransaction packet) {
+            switch (packet.getTransaction().getType()) {
+                case NORMAL:
+                    handleTransactions(packet.getTransaction());
+                    return;
+                case INVENTORY_MISMATCH:
+                    return;
+                case ITEM_USE:
+                    handleTransactionItemUse(packet.getTransaction());
+                    return;
+                case ITEM_USE_ON_ENTITY:
+                    handleTransactionItemUseOnEntity(packet.getTransaction());
+                    return;
+                case ITEM_RELEASE:
+                    handleTransactionItemRelease(packet.getTransaction());
+                    break;
+            }
+        }
+
+        private void handleTransactions(InventoryTransaction transaction) {
+
+        }
+
+        private void handleTransactionItemUse(InventoryTransaction transaction) {
+            ItemUseTransactionType transactionType = (ItemUseTransactionType) transaction.getTransactionType();
+            switch (transactionType.getActionType()) {
+                case PLACE:
+                    return;
+                case USE:
+                    return;
+                case DESTROY:
+                    breakBlock(transactionType.getPosition());
+                    break;
+            }
+        }
+
+        private void handleTransactionItemUseOnEntity(InventoryTransaction transaction) {
+            ItemUseTransactionType transactionType = (ItemUseTransactionType) transaction.getTransactionType();
+        }
+
+        private void handleTransactionItemRelease(InventoryTransaction transaction) {
+            ItemReleaseTransactionType transactionType = (ItemReleaseTransactionType) transaction.getTransactionType();
+        }
+
+        /*@Override
         public void handle(McpeDropItem packet) {
             Health health = ensureAndGet(Health.class);
             if (!spawned || health.isDead()) {
@@ -1075,7 +1149,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
             DroppedItem item = new VoxelwindDroppedItem(getLevel(), getPosition().add(0, 1.3, 0), getServer(), stackOptional.get());
             item.setMotion(getDirectionVector().mul(0.4));
             playerInventory.clearItem(playerInventory.getHeldInventorySlot());
-        }
+        } TODO */
 
         @Override
         public void handle(McpeResourcePackClientResponse packet) {
@@ -1201,6 +1275,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                     record.setEntityId(player.getEntityId());
                     record.setSkin(data.getSkin());
                     record.setName(player.getName());
+                    record.setXuid(session.getAuthenticationProfile().getXuid());
                     list.getRecords().add(record);
                 }
                 session.addToSendQueue(list);

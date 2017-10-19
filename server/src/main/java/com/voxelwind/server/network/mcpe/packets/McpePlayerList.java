@@ -32,6 +32,7 @@ public class McpePlayerList implements NetworkPackage {
                 Varints.encodeUnsigned(buffer, record.entityId);
                 McpeUtil.writeVarintLengthString(buffer, record.name);
                 McpeUtil.writeSkin(buffer, record.skin);
+                McpeUtil.writeVarintLengthString(buffer, Long.toString(record.getXuid()));
             }
         }
     }
@@ -39,6 +40,7 @@ public class McpePlayerList implements NetworkPackage {
     @Data
     public static class Record {
         private final UUID uuid;
+        private long xuid;
         private long entityId;
         private String name;
         private Skin skin;

@@ -13,27 +13,53 @@ public class McpeMovePlayer implements NetworkPackage {
     private long runtimeEntityId;
     private Vector3f position;
     private Rotation rotation;
-    private byte mode;
+    private Mode mode;
     private boolean onGround;
     private long ridingEntityId;
+    private TeleportationCause teleportationCause;
+    private int unknown0;
 
     @Override
     public void decode(ByteBuf buffer) {
         runtimeEntityId = Varints.decodeUnsigned(buffer);
         position = McpeUtil.readVector3f(buffer);
-        rotation = McpeUtil.readByteRotation(buffer);
-        mode = buffer.readByte();
+        rotation = McpeUtil.readRotation(buffer);
+        mode = Mode.values()[(int) buffer.readByte()];
         onGround = buffer.readBoolean();
         ridingEntityId = Varints.decodeUnsigned(buffer);
+        if (mode == Mode.TELEPORT) {
+            teleportationCause = TeleportationCause.values()[buffer.readIntLE()];
+            unknown0 = buffer.readIntLE();
+        }
     }
 
     @Override
     public void encode(ByteBuf buffer) {
         Varints.encodeUnsigned(buffer, runtimeEntityId);
         McpeUtil.writeVector3f(buffer, position);
-        McpeUtil.writeByteRotation(buffer, rotation);
-        buffer.writeByte(mode);
+        McpeUtil.writeRotation(buffer, rotation);
+        buffer.writeByte((byte) mode.ordinal());
         buffer.writeBoolean(onGround);
         Varints.encodeUnsigned(buffer, ridingEntityId);
+        if (mode == Mode.TELEPORT) {
+            buffer.writeIntLE(teleportationCause.ordinal());
+            buffer.writeIntLE(1);
+        }
+    }
+
+    public enum Mode {
+        NORMAL,
+        RESET,
+        TELEPORT,
+        PITCH
+    }
+
+    public enum TeleportationCause {
+        UNKNOWN,
+        PROJECTILE,
+        CHORUS_FRUIT,
+        COMMAND,
+        BEHAVIOR,
+        COUNT
     }
 }

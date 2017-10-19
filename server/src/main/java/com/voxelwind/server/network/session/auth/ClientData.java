@@ -7,8 +7,10 @@ import lombok.Value;
 @Value
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ClientData {
+    @JsonProperty("ADRole")
+    private final String adRole;
     @JsonProperty("CapeData")
-    private final String capeData;
+    private final byte[] capeData; // deserialized
     @JsonProperty("ClientRandomId")
     private final long clientRandomId;
     @JsonProperty("CurrentInputMode")
@@ -23,6 +25,8 @@ public class ClientData {
     private final String gameVersion;
     @JsonProperty("GuiScale")
     private final int guiScale;
+    @JsonProperty("IsEduMode")
+    private final boolean isEduMode;
     @JsonProperty("LanguageCode")
     private final String languageCode;
     @JsonProperty("ServerAddress")

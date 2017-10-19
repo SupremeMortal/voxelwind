@@ -65,9 +65,13 @@ public interface Entity {
     }
 
     default boolean isOnGround() {
-        Vector3i blockPosition = getPosition().sub(0f, 0.1f, 0f).toInt();
+        Vector3i blockPosition = getPosition().sub(0f, 0.18f, 0f).toInt();
 
         if (blockPosition.getY() < 0) {
+            return false;
+        }
+
+        if (blockPosition.getY() < getPosition().getY()) {
             return false;
         }
 

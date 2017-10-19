@@ -9,7 +9,7 @@ import io.netty.buffer.ByteBuf;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-@EqualsAndHashCode(callSuper = false)
+@EqualsAndHashCode(callSuper = true)
 @Data
 public class ItemUseTransactionType extends TransactionType {
     private static final McpeInventoryTransaction.Type type = McpeInventoryTransaction.Type.ITEM_USE;

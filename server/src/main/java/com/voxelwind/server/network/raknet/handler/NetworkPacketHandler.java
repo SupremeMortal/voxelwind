@@ -5,6 +5,8 @@ import com.voxelwind.server.network.mcpe.packets.*;
 public interface NetworkPacketHandler {
     void handle(McpeLogin packet);
 
+    void handle(McpeSubClientLogin packet);
+
     void handle(McpeClientToServerHandshake packet);
 
     void handle(McpeRequestChunkRadius packet);
@@ -23,13 +25,11 @@ public interface NetworkPacketHandler {
 
     void handle(McpeMobEquipment packet);
 
-    void handle(McpeRemoveBlock packet);
-
-    void handle(McpeUseItem packet);
-
-    void handle(McpeDropItem packet);
+    void handle(McpeInventoryTransaction packet);
 
     void handle(McpeResourcePackClientResponse packet);
 
     void handle(McpeCommandRequest packet);
+
+    void handle(McpeAdventureSettings packet);
 }

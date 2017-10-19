@@ -1,7 +1,6 @@
 package com.voxelwind.server.network.raknet.handler;
 
 import com.google.common.net.InetAddresses;
-import com.voxelwind.nbt.util.Varints;
 import com.voxelwind.server.VoxelwindServer;
 import com.voxelwind.server.network.NetworkPackage;
 import com.voxelwind.server.network.PacketRegistry;
@@ -21,6 +20,7 @@ import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.log4j.Log4j2;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
@@ -172,8 +172,20 @@ public class RakNetDatagramHandler extends SimpleChannelInboundHandler<Addressed
         }
 
         // Dispatch block...
+        if (netPackage instanceof McpeMovePlayer) {
+            session.getHandler().handle((McpeMovePlayer) netPackage);
+        }
+        if (netPackage instanceof McpeAnimate) {
+            session.getHandler().handle((McpeAnimate) netPackage);
+        }
+        if (netPackage instanceof McpeInventoryTransaction) {
+            session.getHandler().handle((McpeInventoryTransaction) netPackage);
+        }
         if (netPackage instanceof McpeLogin) {
             session.getHandler().handle((McpeLogin) netPackage);
+        }
+        if (netPackage instanceof McpeSubClientLogin) {
+            session.getHandler().handle((McpeSubClientLogin) netPackage);
         }
         if (netPackage instanceof McpeClientToServerHandshake) {
             session.getHandler().handle((McpeClientToServerHandshake) netPackage);
@@ -184,14 +196,8 @@ public class RakNetDatagramHandler extends SimpleChannelInboundHandler<Addressed
         if (netPackage instanceof McpePlayerAction) {
             session.getHandler().handle((McpePlayerAction) netPackage);
         }
-        if (netPackage instanceof McpeAnimate) {
-            session.getHandler().handle((McpeAnimate) netPackage);
-        }
         if (netPackage instanceof McpeText) {
             session.getHandler().handle((McpeText) netPackage);
-        }
-        if (netPackage instanceof McpeMovePlayer) {
-            session.getHandler().handle((McpeMovePlayer) netPackage);
         }
         if (netPackage instanceof McpeContainerClose) {
             session.getHandler().handle((McpeContainerClose) netPackage);
@@ -202,20 +208,14 @@ public class RakNetDatagramHandler extends SimpleChannelInboundHandler<Addressed
         if (netPackage instanceof McpeMobEquipment) {
             session.getHandler().handle((McpeMobEquipment) netPackage);
         }
-        if (netPackage instanceof McpeRemoveBlock) {
-            session.getHandler().handle((McpeRemoveBlock) netPackage);
-        }
-        if (netPackage instanceof McpeUseItem) {
-            session.getHandler().handle((McpeUseItem) netPackage);
-        }
-        if (netPackage instanceof McpeDropItem) {
-            session.getHandler().handle((McpeDropItem) netPackage);
-        }
         if (netPackage instanceof McpeResourcePackClientResponse) {
             session.getHandler().handle((McpeResourcePackClientResponse) netPackage);
         }
         if (netPackage instanceof McpeCommandRequest) {
             session.getHandler().handle((McpeCommandRequest) netPackage);
+        }
+        if (netPackage instanceof McpeAdventureSettings) {
+            session.getHandler().handle((McpeAdventureSettings) netPackage);
         }
     }
 }

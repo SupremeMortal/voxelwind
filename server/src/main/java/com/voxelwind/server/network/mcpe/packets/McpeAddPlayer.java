@@ -2,13 +2,12 @@ package com.voxelwind.server.network.mcpe.packets;
 
 import com.flowpowered.math.vector.Vector3f;
 import com.voxelwind.api.game.item.ItemStack;
-import com.voxelwind.api.game.level.block.BlockTypes;
 import com.voxelwind.api.util.Rotation;
 import com.voxelwind.nbt.util.Varints;
-import com.voxelwind.server.game.item.VoxelwindItemStack;
 import com.voxelwind.server.game.permissions.PermissionLevel;
 import com.voxelwind.server.network.NetworkPackage;
 import com.voxelwind.server.network.mcpe.McpeUtil;
+import com.voxelwind.server.network.mcpe.util.ActionPermissionFlag;
 import com.voxelwind.server.network.mcpe.util.metadata.MetadataDictionary;
 import io.netty.buffer.ByteBuf;
 import lombok.Data;
@@ -24,10 +23,10 @@ public class McpeAddPlayer implements NetworkPackage {
     private Vector3f position;
     private Vector3f velocity;
     private Rotation rotation;
-    private ItemStack held = new VoxelwindItemStack(BlockTypes.AIR, 1, null);
+    private ItemStack held;
     private final MetadataDictionary metadata = new MetadataDictionary();
     private int flags;
-    private int userPermission;
+    private int commandPermission;
     private int actionPermissions;
     private PermissionLevel permissionLevel;
     private int customPermissions;
@@ -51,10 +50,19 @@ public class McpeAddPlayer implements NetworkPackage {
         McpeUtil.writeItemStack(buffer, held);
         metadata.writeTo(buffer);
         Varints.encodeUnsigned(buffer, flags);
-        Varints.encodeUnsigned(buffer, userPermission);
+        Varints.encodeUnsigned(buffer, commandPermission);
         Varints.encodeUnsigned(buffer, actionPermissions);
         Varints.encodeUnsigned(buffer, permissionLevel.ordinal());
         Varints.encodeUnsigned(buffer, customPermissions);
+        buffer.writeLongLE(userId);
         Varints.encodeUnsigned(buffer, 0); // links, todo
+    }
+
+    public void setActionPermissions(ActionPermissionFlag flag, boolean value) {
+        if (value) {
+            actionPermissions |= flag.getVal();
+        } else {
+            actionPermissions &= ~flag.getVal();
+        }
     }
 }

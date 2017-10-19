@@ -116,8 +116,7 @@ public class CompressionUtil {
      */
     public static ByteBuf inflate(ByteBuf buffer) throws DataFormatException {
         // Ensure that this buffer is direct.
-        if(buffer.readByte() != 0x78) throw new DataFormatException("No zlib header");
-        buffer.readerIndex(0);
+        if (buffer.getByte(0) != 0x78) throw new DataFormatException("No zlib header");
         ByteBuf source = null;
         ByteBuf decompressed = PooledByteBufAllocator.DEFAULT.directBuffer();
 

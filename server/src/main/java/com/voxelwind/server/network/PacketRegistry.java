@@ -8,7 +8,9 @@ import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
+import lombok.extern.log4j.Log4j2;
 
+@Log4j2
 @SuppressWarnings("unchecked")
 public class PacketRegistry {
     private static final Class<? extends NetworkPackage>[] RAKNET_PACKETS = new Class[256];
@@ -28,6 +30,8 @@ public class PacketRegistry {
         RAKNET_PACKETS[0x13] = NewIncomingConnectionPacket.class;
         RAKNET_PACKETS[0x14] = NoFreeIncomingConnectionsPacket.class;
         RAKNET_PACKETS[0x15] = DisconnectNotificationPacket.class;
+        RAKNET_PACKETS[0x17] = ConnectionBannedPacket.class;
+        RAKNET_PACKETS[0x1a] = IpRecentlyConnectedPacket.class;
         RAKNET_PACKETS[0x1c] = UnconnectedPongPacket.class;
         RAKNET_PACKETS[0xa0] = NakPacket.class;
         RAKNET_PACKETS[0xc0] = AckPacket.class;
@@ -53,7 +57,6 @@ public class PacketRegistry {
         MCPE_PACKETS[0x12] = McpeMoveEntity.class;
         MCPE_PACKETS[0x13] = McpeMovePlayer.class;
         MCPE_PACKETS[0x14] = McpeRiderJump.class;
-        //MCPE_PACKETS[0x15] = McpeRemoveBlock.class; removed
         MCPE_PACKETS[0x15] = McpeUpdateBlock.class;
         MCPE_PACKETS[0x16] = McpeAddPainting.class;
         MCPE_PACKETS[0x17] = McpeExplode.class;
@@ -68,7 +71,6 @@ public class PacketRegistry {
         MCPE_PACKETS[0x20] = McpeMobArmorEquipment.class;
         MCPE_PACKETS[0x21] = McpeInteract.class;
         //MCPE_PACKETS[0x22] = McpeBlockPickRequest.class;
-        //MCPE_PACKETS[0x23] = McpeUseItem.class; removed
         //MCPE_PACKETS[0x23] = McpeEntityPickRequest.class;
         MCPE_PACKETS[0x24] = McpePlayerAction.class;
         //MCPE_PACKETS[0x25] = McpeEntityFall.class;
@@ -80,16 +82,12 @@ public class PacketRegistry {
         MCPE_PACKETS[0x2b] = McpeSetSpawnPosition.class;
         MCPE_PACKETS[0x2c] = McpeAnimate.class;
         MCPE_PACKETS[0x2d] = McpeRespawn.class;
-        //MCPE_PACKETS[0x2e] = McpeDropItem.class; removed
-        //MCPE_PACKETS[0x2f] = McpeInventoryAction.class; removed
         MCPE_PACKETS[0x2e] = McpeContainerOpen.class;
         MCPE_PACKETS[0x2f] = McpeContainerClose.class;
         MCPE_PACKETS[0x30] = McpePlayerHotbar.class;
         MCPE_PACKETS[0x31] = McpeInventoryContent.class;
         MCPE_PACKETS[0x32] = McpeInventorySlot.class;
-        //MCPE_PACKETS[0x32] = McpeContainerSetSlot.class; removed
         MCPE_PACKETS[0x33] = McpeContainerSetData.class;
-        //MCPE_PACKETS[0x34] = McpeContainerSetContent.class; removed
         //MCPE_PACKETS[0x34] = McpeCraftingData.class
         //MCPE_PACKETS[0x35] = McpeCraftingEvent.class
         //MCPE_PACKETS[0x36] = McpeGuiDataPickItem.class;
@@ -131,7 +129,7 @@ public class PacketRegistry {
         //MCPE_PACKETS[0x5b] = McpeShowStoreOffer.class;
         //MCPE_PACKETS[0x5c] = McpePurchaseReceipt.class;
         //MCPE_PACKETS[0x5d] = McpePlayerSkin.class;
-        //MCPE_PACKETS[0x5e] = McpeSubClientLogin.class;
+        MCPE_PACKETS[0x5e] = McpeSubClientLogin.class;
         //MCPE_PACKETS[0x5f] = McpeWSConnect.class;
         //MCPE_PACKETS[0x60] = McpeSetLastHurtBy.class;
         //MCPE_PACKETS[0x61] = McpeBookEdit.class;
@@ -202,6 +200,13 @@ public class PacketRegistry {
         }
 
         netPackage.decode(buf);
+
+        if (log.isDebugEnabled()) {
+            if (buf.readableBytes() > 0) {
+                log.debug(netPackage.getClass().getCanonicalName() + " still has " + buf.readableBytes() + " bytes to read!");
+            }
+        }
+
         return netPackage;
     }
 
