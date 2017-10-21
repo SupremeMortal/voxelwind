@@ -203,7 +203,7 @@ public class PacketRegistry {
 
         if (log.isDebugEnabled()) {
             if (buf.readableBytes() > 0) {
-                log.debug(netPackage.getClass().getCanonicalName() + " still has " + buf.readableBytes() + " bytes to read!");
+                log.debug(netPackage.getClass().getSimpleName() + " still has " + buf.readableBytes() + " bytes to read!");
             }
         }
 

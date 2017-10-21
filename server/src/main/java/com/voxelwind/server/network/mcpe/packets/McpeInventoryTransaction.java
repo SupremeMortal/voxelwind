@@ -1,11 +1,9 @@
 package com.voxelwind.server.network.mcpe.packets;
 
 import com.voxelwind.nbt.util.Varints;
+import com.voxelwind.server.game.inventories.transaction.*;
 import com.voxelwind.server.game.inventories.transaction.record.*;
-import com.voxelwind.server.game.inventories.transaction.type.*;
 import com.voxelwind.server.network.NetworkPackage;
-import com.voxelwind.server.network.mcpe.McpeUtil;
-import com.voxelwind.server.game.inventories.transaction.InventoryTransaction;
 import io.netty.buffer.ByteBuf;
 import lombok.Data;
 
@@ -15,8 +13,25 @@ public class McpeInventoryTransaction implements NetworkPackage{
 
     @Override
     public void decode(ByteBuf buffer) {
-        transaction = new InventoryTransaction();
-        Type type = Type.values()[(int)Varints.decodeUnsigned(buffer)];
+        InventoryTransaction.Type type = InventoryTransaction.Type.values()[(int) Varints.decodeUnsigned(buffer)];
+
+        switch (type) {
+            case NORMAL:
+                transaction = new NormalTransaction();
+                break;
+            case INVENTORY_MISMATCH:
+                transaction = new InventoryMismatchTransaction();
+                break;
+            case ITEM_USE:
+                transaction = new ItemUseTransaction();
+                break;
+            case ITEM_USE_ON_ENTITY:
+                transaction = new ItemUseOnEntityTransaction();
+                break;
+            case ITEM_RELEASE:
+                transaction = new ItemReleaseTransaction();
+                break;
+        }
 
         int count = (int) Varints.decodeUnsigned(buffer);
         for(int i = 0; i < count; i++) {
@@ -37,60 +52,33 @@ public class McpeInventoryTransaction implements NetworkPackage{
                 case CREATIVE:
                     record = new CreativeTransactionRecord();
                     break;
-                case UNSPECIFIED:
+                case CRAFT:
                     record = new CraftTransactionRecord();
                     break;
                 default:
                     break;
             }
             record.read(buffer);
-            record.setSource(sourceType);
-            transaction.getTransactions().add(record);
+            transaction.getRecords().add(record);
         }
-        TransactionType transactionType = null;
-        switch(type){
-            case NORMAL:
-                transactionType = new NormalTransactionType();
-                break;
-            case INVENTORY_MISMATCH:
-                transactionType = new InventoryMismatchTransactionType();
-                break;
-            case ITEM_USE:
-                transactionType = new ItemUseTransactionType();
-                break;
-            case ITEM_USE_ON_ENTITY:
-                transactionType = new ItemUseOnEntityTransactionType();
-                break;
-            case ITEM_RELEASE:
-                transactionType = new ItemReleaseTransactionType();
-                break;
-        }
-        transactionType.read(buffer);
-        transaction.setTransactionType(transactionType);
+        transaction.read(buffer);
     }
 
     @Override
     public void encode(ByteBuf buffer) {
         Varints.encodeUnsigned(buffer, transaction.getType().ordinal());
-        Varints.encodeUnsigned(buffer, transaction.getTransactions().size());
-        for(TransactionRecord record : transaction.getTransactions()){
+        Varints.encodeUnsigned(buffer, transaction.getRecords().size());
+        for (TransactionRecord record : transaction.getRecords()) {
             record.write(buffer);
         }
-        transaction.getTransactionType().write(buffer);
+        transaction.write(buffer);
     }
 
-    public enum Type{
-        NORMAL,
-        INVENTORY_MISMATCH,
-        ITEM_USE,
-        ITEM_USE_ON_ENTITY,
-        ITEM_RELEASE
-    }
     public enum InventorySourceType{
         CONTAINER,
         GLOBAL,
         WORLD_INTERACTION,
         CREATIVE,
-        UNSPECIFIED
+        CRAFT
     }
 }

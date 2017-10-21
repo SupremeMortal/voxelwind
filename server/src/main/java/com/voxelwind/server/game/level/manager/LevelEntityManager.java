@@ -84,9 +84,9 @@ public class LevelEntityManager {
                         if (!system.isSystemCompatible(entity)) {
                             continue;
                         }
-                        if (log.isDebugEnabled()) {
+                        /*if (log.isDebugEnabled()) {
                             log.debug("Running entity system {} on {}", system, entity);
-                        }
+                        }*/
                         system.getRunner().run(entity);
                     }
 

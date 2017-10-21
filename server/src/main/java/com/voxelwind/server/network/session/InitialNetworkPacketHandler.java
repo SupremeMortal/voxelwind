@@ -11,6 +11,7 @@ import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.factories.DefaultJWSVerifierFactory;
 import com.voxelwind.api.server.event.session.SessionLoginEvent;
 import com.voxelwind.server.VoxelwindServer;
+import com.voxelwind.server.game.inventories.transaction.*;
 import com.voxelwind.server.jni.CryptoUtil;
 import com.voxelwind.server.network.mcpe.packets.*;
 import com.voxelwind.server.network.mcpe.util.VersionUtil;
@@ -153,6 +154,26 @@ public class InitialNetworkPacketHandler implements NetworkPacketHandler {
     @Override
     public void handle(McpeCommandRequest packet) {
         throw new IllegalStateException("Got unexpected McpeCommandRequest");
+    }
+
+    public void handle(NormalTransaction transaction) {
+        throw new IllegalStateException("Got unexpected NormalTransaction");
+    }
+
+    public void handle(InventoryMismatchTransaction transaction) {
+        throw new IllegalStateException("Got unexpected InventoryMismatchTransaction");
+    }
+
+    public void handle(ItemUseTransaction transaction) {
+        throw new IllegalStateException("Got unexpected ItemUseTransaction");
+    }
+
+    public void handle(ItemUseOnEntityTransaction transaction) {
+        throw new IllegalStateException("Got unexpected ItemUseOnEntityTransaction");
+    }
+
+    public void handle(ItemReleaseTransaction transaction) {
+        throw new IllegalStateException("Got unexpected ItemReleaseTransaction");
     }
 
     private void verifyLogin(AsciiString chainData, AsciiString skinData){

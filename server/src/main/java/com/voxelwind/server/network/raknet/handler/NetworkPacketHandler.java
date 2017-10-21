@@ -1,5 +1,6 @@
 package com.voxelwind.server.network.raknet.handler;
 
+import com.voxelwind.server.game.inventories.transaction.*;
 import com.voxelwind.server.network.mcpe.packets.*;
 
 public interface NetworkPacketHandler {
@@ -32,4 +33,15 @@ public interface NetworkPacketHandler {
     void handle(McpeCommandRequest packet);
 
     void handle(McpeAdventureSettings packet);
+
+    // These are not packets but makes transactions easier to deal with.
+    void handle(NormalTransaction transaction);
+
+    void handle(InventoryMismatchTransaction transaction);
+
+    void handle(ItemUseTransaction transaction);
+
+    void handle(ItemUseOnEntityTransaction transaction);
+
+    void handle(ItemReleaseTransaction transaction);
 }

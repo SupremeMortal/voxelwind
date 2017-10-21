@@ -33,6 +33,7 @@ public class BaseEntity implements Entity {
     protected boolean sneaking = false;
     private boolean invisible = false;
     private boolean removed = false;
+    private boolean affectedByGravity = true;
     protected long tickCreated;
     private BoundingBox boundingBox;
     private final Map<Class<? extends Component>, Component> componentMap = new HashMap<>();
@@ -170,6 +171,21 @@ public class BaseEntity implements Entity {
     }
 
     @Override
+    public boolean isAffectedByGravity() {
+        return affectedByGravity;
+    }
+
+    @Override
+    public void setAffectedByGravity(boolean affectedByGravity) {
+        checkIfAlive();
+
+        if (this.affectedByGravity != affectedByGravity) {
+            this.affectedByGravity = affectedByGravity;
+            stale = true;
+        }
+    }
+
+    @Override
     public Set<Class<? extends Component>> providedComponents() {
         // By default, entities don't provide any components.
         return ImmutableSet.copyOf(componentMap.keySet());
@@ -201,7 +217,7 @@ public class BaseEntity implements Entity {
     protected long getFlagValue() {
         BitSet set = new BitSet(64);
         // Fill with values
-        set.set(DATA_FLAGS_AFFECTED_BY_GRAVITY, true); // Not implemented but we need gravity.
+        set.set(DATA_FLAGS_AFFECTED_BY_GRAVITY, affectedByGravity); // Affected by Gravity
         set.set(DATA_FLAGS_ON_FIRE, false); // Not implemented
         set.set(DATA_FLAGS_SNEAKING, sneaking); // Sneaking
         set.set(DATA_FLAGS_RIDING, false); // Riding (not implemented)

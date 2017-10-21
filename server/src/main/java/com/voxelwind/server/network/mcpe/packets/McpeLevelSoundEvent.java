@@ -1,6 +1,6 @@
 package com.voxelwind.server.network.mcpe.packets;
 
-import com.flowpowered.math.vector.Vector3i;
+import com.flowpowered.math.vector.Vector3f;
 import com.voxelwind.nbt.util.Varints;
 import com.voxelwind.server.network.NetworkPackage;
 import com.voxelwind.server.network.mcpe.McpeUtil;
@@ -10,7 +10,7 @@ import lombok.Data;
 @Data
 public class McpeLevelSoundEvent implements NetworkPackage{
     private byte soundId;
-    private Vector3i position;
+    private Vector3f position;
     private int blockId;
     private int entityType;
     private boolean babyMob;
@@ -19,7 +19,7 @@ public class McpeLevelSoundEvent implements NetworkPackage{
     @Override
     public void decode(ByteBuf buffer) {
         soundId = buffer.readByte();
-        position = McpeUtil.readBlockCoords(buffer);
+        position = McpeUtil.readVector3f(buffer);
         blockId = Varints.decodeSigned(buffer);
         entityType = Varints.decodeSigned(buffer);
         babyMob = buffer.readBoolean();
@@ -29,7 +29,7 @@ public class McpeLevelSoundEvent implements NetworkPackage{
     @Override
     public void encode(ByteBuf buffer) {
         buffer.writeByte(soundId);
-        McpeUtil.writeBlockCoords(buffer, position);
+        McpeUtil.writeVector3f(buffer, position);
         Varints.encodeSigned(buffer, blockId);
         Varints.encodeSigned(buffer, entityType);
         buffer.writeBoolean(babyMob);

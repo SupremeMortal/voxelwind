@@ -1,14 +1,14 @@
-package com.voxelwind.server.game.inventories.transaction.type;
+package com.voxelwind.server.game.inventories.transaction;
 
-import com.voxelwind.server.network.mcpe.packets.McpeInventoryTransaction;
+import com.voxelwind.server.network.session.McpeSession;
 import io.netty.buffer.ByteBuf;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = false)
 @Data
-public class NormalTransactionType extends TransactionType {
-    private static final McpeInventoryTransaction.Type type = McpeInventoryTransaction.Type.NORMAL;
+public class NormalTransaction extends InventoryTransaction {
+    private static final Type type = Type.NORMAL;
 
     @Override
     public void read(ByteBuf buffer){
@@ -18,8 +18,14 @@ public class NormalTransactionType extends TransactionType {
     public void write(ByteBuf buffer){
     }
 
-    public McpeInventoryTransaction.Type getType(){
+    @Override
+    public Type getType() {
         return type;
+    }
+
+    @Override
+    public void handle(McpeSession session) {
+        session.getHandler().handle(this);
     }
 
     public static final int ACTION_PUT_SLOT = -2;

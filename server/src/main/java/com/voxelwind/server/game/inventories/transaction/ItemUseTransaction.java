@@ -1,18 +1,20 @@
-package com.voxelwind.server.game.inventories.transaction.type;
+package com.voxelwind.server.game.inventories.transaction;
 
 import com.flowpowered.math.vector.Vector3f;
 import com.flowpowered.math.vector.Vector3i;
 import com.voxelwind.nbt.util.Varints;
 import com.voxelwind.server.network.mcpe.McpeUtil;
-import com.voxelwind.server.network.mcpe.packets.McpeInventoryTransaction;
+import com.voxelwind.server.network.session.McpeSession;
 import io.netty.buffer.ByteBuf;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
+@ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class ItemUseTransactionType extends TransactionType {
-    private static final McpeInventoryTransaction.Type type = McpeInventoryTransaction.Type.ITEM_USE;
+public class ItemUseTransaction extends InventoryTransaction {
+    private static final Type type = Type.ITEM_USE;
     private Action actionType;
     private Vector3i position;
     private int face;
@@ -35,13 +37,18 @@ public class ItemUseTransactionType extends TransactionType {
     }
 
     @Override
-    public McpeInventoryTransaction.Type getType(){
+    public Type getType() {
         return type;
+    }
+
+    @Override
+    public void handle(McpeSession session) {
+        session.getHandler().handle(this);
     }
 
     public enum Action {
         PLACE,
         USE,
-        DESTROY
+        BREAK
     }
 }

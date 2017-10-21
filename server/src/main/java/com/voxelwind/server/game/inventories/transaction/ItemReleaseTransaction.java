@@ -1,15 +1,17 @@
-package com.voxelwind.server.game.inventories.transaction.type;
+package com.voxelwind.server.game.inventories.transaction;
 
 import com.voxelwind.nbt.util.Varints;
-import com.voxelwind.server.network.mcpe.packets.McpeInventoryTransaction;
+import com.voxelwind.server.network.session.McpeSession;
 import io.netty.buffer.ByteBuf;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
+@ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class ItemReleaseTransactionType extends TransactionType {
-    private static final McpeInventoryTransaction.Type type = McpeInventoryTransaction.Type.ITEM_RELEASE;
+public class ItemReleaseTransaction extends InventoryTransaction {
+    private static final Type type = Type.ITEM_RELEASE;
     private int actionType;
 
     @Override
@@ -24,8 +26,14 @@ public class ItemReleaseTransactionType extends TransactionType {
         super.write(buffer);
     }
 
-    public McpeInventoryTransaction.Type getType(){
+    @Override
+    public Type getType() {
         return type;
+    }
+
+    @Override
+    public void handle(McpeSession session) {
+        session.getHandler().handle(this);
     }
 
     public enum Action {

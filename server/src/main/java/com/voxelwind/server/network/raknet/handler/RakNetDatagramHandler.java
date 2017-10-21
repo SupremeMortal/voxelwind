@@ -114,9 +114,9 @@ public class RakNetDatagramHandler extends SimpleChannelInboundHandler<Addressed
                     cleartext = wrappedData;
                 }
 
-                if (log.isDebugEnabled()) {
+                /*if (log.isDebugEnabled()) {
                     log.debug("[MCPE WRAPPER HEX]\n{}", ByteBufUtil.prettyHexDump(cleartext));
-                }
+                }*/
 
                 packages = CompressionUtil.decompressWrapperPackets(cleartext);
             } finally {

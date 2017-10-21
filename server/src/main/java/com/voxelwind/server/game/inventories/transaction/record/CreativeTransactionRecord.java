@@ -4,8 +4,10 @@ import com.voxelwind.nbt.util.Varints;
 import io.netty.buffer.ByteBuf;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
-@EqualsAndHashCode(callSuper = false)
+@ToString(callSuper = true)
+@EqualsAndHashCode(callSuper = true)
 @Data
 public class CreativeTransactionRecord extends TransactionRecord{
     private int inventoryId;

@@ -18,8 +18,10 @@ import com.voxelwind.api.game.item.ItemStack;
 import com.voxelwind.api.game.level.Chunk;
 import com.voxelwind.api.game.level.Level;
 import com.voxelwind.api.game.level.block.Block;
+import com.voxelwind.api.game.level.block.BlockType;
 import com.voxelwind.api.game.level.block.BlockTypes;
 import com.voxelwind.api.game.util.TextFormat;
+import com.voxelwind.api.game.util.data.BlockFace;
 import com.voxelwind.api.server.Player;
 import com.voxelwind.api.server.command.CommandException;
 import com.voxelwind.api.server.command.CommandNotFoundException;
@@ -39,13 +41,12 @@ import com.voxelwind.server.game.entities.components.HealthComponent;
 import com.voxelwind.server.game.entities.components.PlayerDataComponent;
 import com.voxelwind.server.game.entities.systems.DeathSystem;
 import com.voxelwind.server.game.inventories.*;
-import com.voxelwind.server.game.inventories.transaction.InventoryTransaction;
-import com.voxelwind.server.game.inventories.transaction.type.ItemReleaseTransactionType;
-import com.voxelwind.server.game.inventories.transaction.type.ItemUseTransactionType;
+import com.voxelwind.server.game.inventories.transaction.*;
 import com.voxelwind.server.game.level.VoxelwindLevel;
 import com.voxelwind.server.game.level.block.BasicBlockState;
 import com.voxelwind.server.game.level.block.BlockBehavior;
 import com.voxelwind.server.game.level.block.BlockBehaviors;
+import com.voxelwind.server.game.level.block.behaviors.BehaviorUtils;
 import com.voxelwind.server.game.level.chunk.util.FullChunkPacketCreator;
 import com.voxelwind.server.game.level.util.BoundingBox;
 import com.voxelwind.server.game.level.util.Gamerule;
@@ -240,12 +241,12 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         startGame.setMultiplayer(true);
         startGame.setBroadcastToLan(true);
         startGame.setBroadcastToXbl(true);
-        startGame.setEnableCommands(false);
+        startGame.setEnableCommands(true);
         startGame.setTexturepacksRequired(false);
         startGame.getGameRules().addAll(getGameRules());
         startGame.setBonusChest(false);
-        startGame.setMapEnabled(false);
-        startGame.setTrustPlayers(false);
+        startGame.setMapEnabled(true);
+        startGame.setTrustPlayers(true);
         startGame.setPermissionLevel(PermissionLevel.CUSTOM);
         startGame.setGamePublishSettings(3);
         startGame.setLevelId("SECRET");
@@ -750,6 +751,57 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         });
     }
 
+    private void placeBlock(ItemUseTransaction transaction) {
+        // Sanity check:
+        ItemStack clientHand = transaction.getItem();
+
+        Optional<ItemStack> actuallyInHand = playerInventory.getStackInHand();
+        if (actuallyInHand.isPresent() && clientHand.getItemType() != actuallyInHand.get().getItemType() ||
+                !actuallyInHand.isPresent() && clientHand.getItemType() != BlockTypes.AIR) {
+            // Not actually the same item.
+            sendPlayerInventory();
+            return;
+        }
+
+        if (!actuallyInHand.isPresent()) return; // If there is nothing in hand then there is nothing to do.
+
+        // What block is this item being used against?
+        Optional<Block> usedAgainst = getLevel().getBlockIfChunkLoaded(transaction.getPosition());
+        if (!usedAgainst.isPresent()) {
+            // Not loaded into memory.
+            return;
+        }
+
+        // Ask the block being checked. TODO: implement block replace event here
+        ItemStack serverInHand = actuallyInHand.get();
+        BlockFace face = BlockFace.values()[transaction.getFace()];
+        BlockBehavior againstBehavior = BlockBehaviors.getBlockBehavior(usedAgainst.get().getBlockState().getBlockType());
+        switch (againstBehavior.handleItemInteraction(getServer(), PlayerSession.this, transaction.getPosition(), face, serverInHand)) {
+            case NOTHING:
+                // Update inventory
+                sendPlayerInventory();
+                return;
+            case PLACE_BLOCK_AND_REMOVE_ITEM:
+                Preconditions.checkState(serverInHand.getItemType() instanceof BlockType, "Tried to place air or non-block.");
+                if (!BehaviorUtils.setBlockState(PlayerSession.this, transaction.getPosition().add(face.getOffset()), BehaviorUtils.createBlockState(usedAgainst.get().getLevelLocation(), face, serverInHand))) {
+                    sendPlayerInventory();
+                    break;
+                }
+                // This will fall through
+            case REMOVE_ONE_ITEM:
+                int newItemAmount = serverInHand.getAmount() - 1;
+                if (newItemAmount <= 0) {
+                    playerInventory.clearItem(playerInventory.getHeldInventorySlot());
+                } else {
+                    playerInventory.setItem(playerInventory.getHeldInventorySlot(), serverInHand.toBuilder().amount(newItemAmount).build());
+                }
+                break;
+            case REDUCE_DURABILITY:
+                // TODO: Implement
+                break;
+        }
+    }
+
     public boolean isSpawned() {
         return spawned;
     }
@@ -888,7 +940,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                 return;
             }
 
-            Preconditions.checkArgument(packet.getType() == McpeText.TextType.RAW, "Text packet type from client is not RAW");
+            Preconditions.checkArgument(packet.getType() == McpeText.TextType.CHAT, "Text packet type from client is not CHAT");
             Preconditions.checkArgument(!packet.getMessage().contains("\0"), "Text packet from client contains a null byte");
             Preconditions.checkArgument(!packet.getMessage().trim().isEmpty(), "Text packet from client is effectively empty");
 
@@ -905,6 +957,8 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                 return;
             }
 
+            packet.setSource(getName());
+            packet.setNeedsTranslation(false); // Deal with this later.
             // By default, queue this packet for all players in the world.
             getLevel().getPacketManager().queuePacketForPlayers(packet);
         }
@@ -1016,64 +1070,54 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
             playerInventory.setHeldHotbarSlot(packet.getHotbarSlot(), false);
         }
 
-        /*@Override
-        public void handle(McpeUseItem packet) { TODO: move this over to InventoryTransaction (GOD PACKET)
-            Health health = ensureAndGet(Health.class);
-            if (!spawned || health.isDead()) {
+        /*private void placeBlock(ItemUseTransaction itemUseTransaction) {
+            // Sanity check:
+            Optional<ItemStack> actuallyInHand = playerInventory.getStackInHand();
+            if (log.isDebugEnabled()) {
+                log.debug("Held: {}, slot: {}", actuallyInHand, playerInventory.getHeldHotbarSlot());
+            }
+            if ((actuallyInHand.isPresent() && actuallyInHand.get().getItemType() != packet.getStack().getItemType()) ||
+                    !actuallyInHand.isPresent() && packet.getStack().getItemType() == BlockTypes.AIR) {
+                // Not actually the same item.
                 return;
             }
 
-            if (packet.getFace() == 0xff) {
-                // TODO: Snowballs.
-            } else if (packet.getFace() >= 0 && packet.getFace() <= 5) {
-                // Sanity check:
-                Optional<ItemStack> actuallyInHand = playerInventory.getStackInHand();
-                if (log.isDebugEnabled()) {
-                    log.debug("Held: {}, slot: {}", actuallyInHand, playerInventory.getHeldHotbarSlot());
-                }
-                if ((actuallyInHand.isPresent() && actuallyInHand.get().getItemType() != packet.getStack().getItemType()) ||
-                        !actuallyInHand.isPresent() && packet.getStack().getItemType() == BlockTypes.AIR) {
-                    // Not actually the same item.
-                    return;
-                }
+            // What block is this item being used against?
+            Optional<Block> usedAgainst = getLevel().getBlockIfChunkLoaded(itemUseTransaction.getClickPosition().toInt());
+            if (!usedAgainst.isPresent()) {
+                // Not loaded into memory.
+                return;
+            }
 
-                // What block is this item being used against?
-                Optional<Block> usedAgainst = getLevel().getBlockIfChunkLoaded(packet.getLocation());
-                if (!usedAgainst.isPresent()) {
-                    // Not loaded into memory.
+            // Ask the block being checked.
+            ItemStack serverInHand = actuallyInHand.orElse(null);
+            BlockFace face = BlockFace.values()[itemUseTransaction.getFace()];
+            BlockBehavior againstBehavior = BlockBehaviors.getBlockBehavior(usedAgainst.get().getBlockState().getBlockType());
+            switch (againstBehavior.handleItemInteraction(getServer(), PlayerSession.this, itemUseTransaction.getClickPosition().toInt(), face, serverInHand)) {
+                case NOTHING:
+                    // Update inventory
+                    sendPlayerInventory();
                     return;
-                }
-
-                // Ask the block being checked.
-                ItemStack serverInHand = actuallyInHand.orElse(null);
-                BlockFace face = BlockFace.values()[packet.getFace()];
-                BlockBehavior againstBehavior = BlockBehaviors.getBlockBehavior(usedAgainst.get().getBlockState().getBlockType());
-                switch (againstBehavior.handleItemInteraction(getServer(), PlayerSession.this, packet.getLocation(), face, serverInHand)) {
-                    case NOTHING:
-                        // Update inventory
+                case PLACE_BLOCK_AND_REMOVE_ITEM:
+                    Preconditions.checkState(serverInHand != null && serverInHand.getItemType() instanceof BlockType, "Tried to place air or non-block.");
+                    if (!BehaviorUtils.setBlockState(PlayerSession.this, itemUseTransaction.getClickPosition().toInt().add(face.getOffset()), BehaviorUtils.createBlockState(usedAgainst.get().getLevelLocation(), face, serverInHand))) {
                         sendPlayerInventory();
                         break;
-                    case PLACE_BLOCK_AND_REMOVE_ITEM:
-                        Preconditions.checkState(serverInHand != null && serverInHand.getItemType() instanceof BlockType, "Tried to place air or non-block.");
-                        if (!BehaviorUtils.setBlockState(PlayerSession.this, packet.getLocation().add(face.getOffset()), BehaviorUtils.createBlockState(usedAgainst.get().getLevelLocation(), face, serverInHand))) {
-                            sendPlayerInventory();
-                            return;
+                    }
+                    // This will fall through
+                /*case REMOVE_ONE_ITEM:
+                    if (serverInHand != null) {
+                        int newItemAmount = serverInHand.getAmount() - 1;
+                        if (newItemAmount <= 0) {
+                            playerInventory.clearItem(playerInventory.getHeldInventorySlot());
+                        } else {
+                            playerInventory.setItem(playerInventory.getHeldInventorySlot(), serverInHand.toBuilder().amount(newItemAmount).build());
                         }
-                        // This will fall through
-                    case REMOVE_ONE_ITEM:
-                        if (serverInHand != null) {
-                            int newItemAmount = serverInHand.getAmount() - 1;
-                            if (newItemAmount <= 0) {
-                                playerInventory.clearItem(playerInventory.getHeldInventorySlot());
-                            } else {
-                                playerInventory.setItem(playerInventory.getHeldInventorySlot(), serverInHand.toBuilder().amount(newItemAmount).build());
-                            }
-                        }
-                        break;
-                    case REDUCE_DURABILITY:
-                        // TODO: Implement
-                        break;
-                }
+                    }
+                    break;
+                case REDUCE_DURABILITY:
+                    // TODO: Implement
+                    break;
             }
         }*/
 
@@ -1085,47 +1129,46 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
 
         @Override
         public void handle(McpeInventoryTransaction packet) {
-            switch (packet.getTransaction().getType()) {
-                case NORMAL:
-                    handleTransactions(packet.getTransaction());
-                    return;
-                case INVENTORY_MISMATCH:
-                    return;
-                case ITEM_USE:
-                    handleTransactionItemUse(packet.getTransaction());
-                    return;
-                case ITEM_USE_ON_ENTITY:
-                    handleTransactionItemUseOnEntity(packet.getTransaction());
-                    return;
-                case ITEM_RELEASE:
-                    handleTransactionItemRelease(packet.getTransaction());
-                    break;
+            Health health = ensureAndGet(Health.class);
+            if (!spawned || health.isDead()) {
+                return;
             }
+
+            packet.getTransaction().handle(session);
         }
 
-        private void handleTransactions(InventoryTransaction transaction) {
-
+        @Override
+        public void handle(NormalTransaction transaction) {
+            // TODO
         }
 
-        private void handleTransactionItemUse(InventoryTransaction transaction) {
-            ItemUseTransactionType transactionType = (ItemUseTransactionType) transaction.getTransactionType();
-            switch (transactionType.getActionType()) {
-                case PLACE:
-                    return;
+        @Override
+        public void handle(InventoryMismatchTransaction transaction) {
+            // TODO
+        }
+
+        @Override
+        public void handle(ItemUseTransaction transaction) {
+            switch (transaction.getActionType()) {
                 case USE:
                     return;
-                case DESTROY:
-                    breakBlock(transactionType.getPosition());
+                case PLACE:
+                    placeBlock(transaction);
+                    return;
+                case BREAK:
+                    breakBlock(transaction.getPosition());
                     break;
             }
         }
 
-        private void handleTransactionItemUseOnEntity(InventoryTransaction transaction) {
-            ItemUseTransactionType transactionType = (ItemUseTransactionType) transaction.getTransactionType();
+        @Override
+        public void handle(ItemUseOnEntityTransaction transaction) {
+            // TODO
         }
 
-        private void handleTransactionItemRelease(InventoryTransaction transaction) {
-            ItemReleaseTransactionType transactionType = (ItemReleaseTransactionType) transaction.getTransactionType();
+        @Override
+        public void handle(ItemReleaseTransaction transaction) {
+            // TODO
         }
 
         /*@Override

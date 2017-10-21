@@ -29,7 +29,7 @@ public class RakNetDirectPacketHandler extends SimpleChannelInboundHandler<Direc
                     UnconnectedPongPacket response = new UnconnectedPongPacket();
                     response.setPingId(request.getPingId());
                     response.setServerId(SERVER_ID);
-                    response.setAdvertise("MCPE;Voxelwind server;137;1.2;" + server.getSessionManager().countConnected() + ";" + server.getConfiguration().getMaximumPlayerLimit());
+                    response.setAdvertise("MCPE;Voxelwind server;137;1.2;" + server.getSessionManager().countConnected() + ";" + server.getConfiguration().getMaximumPlayerLimit() + ";" + "Voxelwind server".hashCode() + packet.sender().getHostString() + packet.sender().getPort() + ";High performance Bedrock Edition Server;" + "Survival");
                     ctx.writeAndFlush(new DirectAddressedRakNetPacket(response, packet.sender(), packet.recipient()), ctx.voidPromise());
                     return;
                 }
