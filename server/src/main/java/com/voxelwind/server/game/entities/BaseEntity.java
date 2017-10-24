@@ -238,8 +238,8 @@ public class BaseEntity implements Entity {
         dictionary.put(DATA_HIDE_NAME_TAG, (byte) 0); // Not implemented
         dictionary.put(DATA_MAYBE_AGE, 0); // Scale (not implemented)
         dictionary.put(DATA_SCALE, 1f); // Scale (not implemented)
-        dictionary.put(DATA_MAX_AIR, (short) 20);
-        dictionary.put(DATA_AIR, (short) 20);
+        dictionary.put(DATA_MAX_AIR, (short) 400);
+        dictionary.put(DATA_AIR, (short) 0);
         dictionary.put(DATA_COLLISION_BOX_HEIGHT, data.getHeight());
         dictionary.put(DATA_COLLISION_BOX_WIDTH, data.getWidth());
         return dictionary;
