@@ -15,13 +15,13 @@ import lombok.ToString;
 @Data
 public class ItemUseTransaction extends InventoryTransaction {
     private static final Type type = Type.ITEM_USE;
-    private Action actionType;
+    private Action action;
     private Vector3i position;
     private int face;
     private Vector3f clickPosition;
 
     public void read(ByteBuf buffer){
-        actionType = Action.values()[(int) Varints.decodeUnsigned(buffer)];
+        action = Action.values()[(int) Varints.decodeUnsigned(buffer)];
         position = McpeUtil.readBlockCoords(buffer);
         face = Varints.decodeSigned(buffer);
         super.read(buffer);
@@ -29,7 +29,7 @@ public class ItemUseTransaction extends InventoryTransaction {
     }
 
     public void write(ByteBuf buffer){
-        Varints.encodeUnsigned(buffer, actionType.ordinal());
+        Varints.encodeUnsigned(buffer, action.ordinal());
         McpeUtil.writeBlockCoords(buffer, position);
         Varints.encodeSigned(buffer, face);
         super.write(buffer);

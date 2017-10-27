@@ -4,8 +4,10 @@ import com.voxelwind.server.network.session.McpeSession;
 import io.netty.buffer.ByteBuf;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
-@EqualsAndHashCode(callSuper = false)
+@ToString(callSuper = true)
+@EqualsAndHashCode(callSuper = true)
 @Data
 public class NormalTransaction extends InventoryTransaction {
     private static final Type type = Type.NORMAL;

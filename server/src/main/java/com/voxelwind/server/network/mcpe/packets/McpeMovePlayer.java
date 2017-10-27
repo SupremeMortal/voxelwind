@@ -28,8 +28,8 @@ public class McpeMovePlayer implements NetworkPackage {
         onGround = buffer.readBoolean();
         ridingEntityId = Varints.decodeUnsigned(buffer);
         if (mode == Mode.TELEPORT) {
-            teleportationCause = TeleportationCause.values()[buffer.readIntLE()];
-            unknown0 = buffer.readIntLE();
+            teleportationCause = TeleportationCause.values()[buffer.readInt()];
+            unknown0 = buffer.readInt();
         }
     }
 
@@ -42,8 +42,8 @@ public class McpeMovePlayer implements NetworkPackage {
         buffer.writeBoolean(onGround);
         Varints.encodeUnsigned(buffer, ridingEntityId);
         if (mode == Mode.TELEPORT) {
-            buffer.writeIntLE(teleportationCause.ordinal());
-            buffer.writeIntLE(1);
+            buffer.writeInt(teleportationCause.ordinal());
+            buffer.writeInt(1);
         }
     }
 
