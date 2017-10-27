@@ -33,4 +33,36 @@ public interface PlayerData extends Component {
     float getExhaustion();
 
     void setExhaustion(@Nonnegative float exhaustion);
+
+    boolean isFlying();
+
+    void setFlying(boolean flying);
+
+    boolean isAllowedToFly();
+
+    void setAllowedToFly(boolean allowedToFly);
+
+    boolean isImmutableWorld();
+
+    void setImmutableWorld(boolean immutableWorld);
+
+    boolean canPvP();
+
+    void setPvP(boolean pvp);
+
+    boolean canAutoJump();
+
+    void setAutoJump(boolean autoJump);
+
+    boolean canNoClip();
+
+    void setNoClip(boolean noClip);
+
+    boolean isWorldBuilder();
+
+    void setWorldBuilder(boolean worldBuilder);
+
+    boolean isMuted();
+
+    void setMuted(boolean muted);
 }

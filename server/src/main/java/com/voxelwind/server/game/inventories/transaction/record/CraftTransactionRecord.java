@@ -1,6 +1,7 @@
 package com.voxelwind.server.game.inventories.transaction.record;
 
 import com.voxelwind.nbt.util.Varints;
+import com.voxelwind.server.network.session.PlayerSession;
 import io.netty.buffer.ByteBuf;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -22,6 +23,11 @@ public class CraftTransactionRecord extends TransactionRecord{
     public void read(ByteBuf buffer){
         inventoryId = Varints.decodeSigned(buffer);
         super.read(buffer);
+    }
+
+    @Override
+    public void execute(PlayerSession session) {
+        // TODO
     }
 
     public static final int TYPE_CRAFTING_ADD_INGREDIENT = -2;

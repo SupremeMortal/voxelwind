@@ -13,6 +13,7 @@ public class PlayerDataComponent implements PlayerData {
     private volatile boolean gamemodeTouched = false;
     private volatile boolean attributesTouched = false;
     private volatile boolean hungerTouched = false;
+    private volatile boolean adventureSettingsTouched = false;
 
     private final Skin skin;
     private volatile GameMode gameMode = GameMode.SURVIVAL;
@@ -20,6 +21,14 @@ public class PlayerDataComponent implements PlayerData {
     private volatile int hunger = 20;
     private volatile float saturation = 20f;
     private volatile float exhaustion = 4f;
+    private volatile boolean flying = false;
+    private volatile boolean allowedToFly = false;
+    private volatile boolean immutableWorld = false;
+    private volatile boolean pvp = true;
+    private volatile boolean autoJump = false;
+    private volatile boolean noClip = false;
+    private volatile boolean worldBuilder = true;
+    private volatile boolean muted = false;
 
     public PlayerDataComponent(PlayerSession player) {
         this.skin = new Skin(
@@ -96,6 +105,95 @@ public class PlayerDataComponent implements PlayerData {
         hungerTouched = true;
     }
 
+    @Override
+    public boolean isFlying() {
+        return flying;
+    }
+
+    @Override
+    public void setFlying(boolean flying) {
+        this.flying = flying;
+        adventureSettingsTouched = true;
+    }
+
+    @Override
+    public boolean isAllowedToFly() {
+        return allowedToFly;
+    }
+
+    @Override
+    public void setAllowedToFly(boolean allowedToFly) {
+        if (!allowedToFly) flying = false;
+        this.allowedToFly = allowedToFly;
+        adventureSettingsTouched = true;
+    }
+
+    @Override
+    public boolean isImmutableWorld() {
+        return immutableWorld;
+    }
+
+    @Override
+    public void setImmutableWorld(boolean immutableWorld) {
+        this.immutableWorld = immutableWorld;
+        adventureSettingsTouched = true;
+    }
+
+    @Override
+    public boolean canPvP() {
+        return pvp;
+    }
+
+    @Override
+    public void setPvP(boolean pvp) {
+        this.pvp = pvp;
+        adventureSettingsTouched = true;
+    }
+
+    @Override
+    public boolean canAutoJump() {
+        return autoJump;
+    }
+
+    @Override
+    public void setAutoJump(boolean autoJump) {
+        this.autoJump = autoJump;
+        adventureSettingsTouched = true;
+    }
+
+    @Override
+    public boolean canNoClip() {
+        return noClip;
+    }
+
+    @Override
+    public void setNoClip(boolean noClip) {
+        this.noClip = noClip;
+        adventureSettingsTouched = true;
+    }
+
+    @Override
+    public boolean isWorldBuilder() {
+        return worldBuilder;
+    }
+
+    @Override
+    public void setWorldBuilder(boolean worldBuilder) {
+        this.worldBuilder = worldBuilder;
+        adventureSettingsTouched = true;
+    }
+
+    @Override
+    public boolean isMuted() {
+        return muted;
+    }
+
+    @Override
+    public void setMuted(boolean muted) {
+        this.muted = muted;
+        adventureSettingsTouched = true;
+    }
+
     public boolean gamemodeTouched() {
         boolean prev = gamemodeTouched;
         gamemodeTouched = false;
@@ -111,6 +209,12 @@ public class PlayerDataComponent implements PlayerData {
     public boolean hungerTouched() {
         boolean prev = attributesTouched;
         attributesTouched = false;
+        return prev;
+    }
+
+    public boolean adventureSettingsTouched() {
+        boolean prev = adventureSettingsTouched;
+        adventureSettingsTouched = false;
         return prev;
     }
 }

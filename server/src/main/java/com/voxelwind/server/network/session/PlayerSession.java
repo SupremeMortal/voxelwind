@@ -34,14 +34,18 @@ import com.voxelwind.api.server.player.PopupMessage;
 import com.voxelwind.api.server.player.TranslatedMessage;
 import com.voxelwind.api.util.Rotation;
 import com.voxelwind.server.VoxelwindServer;
+import com.voxelwind.server.command.VoxelwindCommandManager;
 import com.voxelwind.server.game.entities.BaseEntity;
 import com.voxelwind.server.game.entities.EntityTypeData;
 import com.voxelwind.server.game.entities.LivingEntity;
 import com.voxelwind.server.game.entities.components.HealthComponent;
 import com.voxelwind.server.game.entities.components.PlayerDataComponent;
+import com.voxelwind.server.game.entities.misc.VoxelwindDroppedItem;
 import com.voxelwind.server.game.entities.systems.DeathSystem;
 import com.voxelwind.server.game.inventories.*;
 import com.voxelwind.server.game.inventories.transaction.*;
+import com.voxelwind.server.game.inventories.transaction.record.TransactionRecord;
+import com.voxelwind.server.game.inventories.transaction.record.WorldInteractionTransactionRecord;
 import com.voxelwind.server.game.level.VoxelwindLevel;
 import com.voxelwind.server.game.level.block.BasicBlockState;
 import com.voxelwind.server.game.level.block.BlockBehavior;
@@ -261,25 +265,6 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         setTime.setTime(getLevel().getTime());
         session.addToSendQueue(setTime);
 
-        McpeAdventureSettings settings = new McpeAdventureSettings();
-        settings.setFlags(McpeAdventureSettings.Flag.ALLOW_FLIGHT, false);
-        settings.setFlags(McpeAdventureSettings.Flag.FLYING, false);
-        settings.setFlags(McpeAdventureSettings.Flag.NO_CLIP, false);
-        settings.setFlags(McpeAdventureSettings.Flag.AUTO_JUMP, false);
-        settings.setFlags(McpeAdventureSettings.Flag.IMMUTABLE_WORLD, false);
-        settings.setFlags(McpeAdventureSettings.Flag.MUTED, false);
-        settings.setFlags(McpeAdventureSettings.Flag.WORLD_BUILDER, true);
-        settings.setFlags(McpeAdventureSettings.Flag.NO_PVP, false);
-        settings.setFlags(McpeAdventureSettings.Flag.NO_MVP, false);
-        settings.setFlags(McpeAdventureSettings.Flag.NO_PVM, false);
-        settings.setCommandPermissions(1);
-        settings.setPermissionLevel(PermissionLevel.OPERATOR);
-        settings.setCustomStoredPermissions(0);
-        settings.setActionPermissions(ActionPermissionFlag.DEFAULT, true);
-        settings.setUserId(getEntityId());
-
-        session.addToSendQueue(settings);
-
         sendAttributes();
         sendPlayerInventory();
     }
@@ -319,6 +304,30 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         sentChunks.retainAll(chunksForRadius);
 
         return CompletableFutures.allAsList(completableFutures);
+    }
+
+    private void sendAdventureSettings() {
+        PlayerData playerData = ensureAndGet(PlayerData.class);
+        McpeAdventureSettings settings = new McpeAdventureSettings();
+        boolean spectator = (playerData.getGameMode() == GameMode.SPECTATOR);
+
+        settings.setFlags(McpeAdventureSettings.Flag.ALLOW_FLIGHT, playerData.isAllowedToFly());
+        settings.setFlags(McpeAdventureSettings.Flag.FLYING, playerData.isFlying());
+        settings.setFlags(McpeAdventureSettings.Flag.NO_CLIP, playerData.canNoClip());
+        settings.setFlags(McpeAdventureSettings.Flag.AUTO_JUMP, playerData.canAutoJump());
+        settings.setFlags(McpeAdventureSettings.Flag.IMMUTABLE_WORLD, playerData.isImmutableWorld());
+        settings.setFlags(McpeAdventureSettings.Flag.MUTED, playerData.isMuted());
+        settings.setFlags(McpeAdventureSettings.Flag.WORLD_BUILDER, playerData.isWorldBuilder());
+        settings.setFlags(McpeAdventureSettings.Flag.NO_PVP, !playerData.canPvP() || spectator);
+        settings.setFlags(McpeAdventureSettings.Flag.NO_MVP, !playerData.canPvP() || spectator);
+        settings.setFlags(McpeAdventureSettings.Flag.NO_PVM, !playerData.canPvP() || spectator);
+        settings.setCommandPermissions(1);
+        settings.setPermissionLevel(PermissionLevel.OPERATOR);
+        settings.setCustomStoredPermissions(0);
+        settings.setActionPermissions(ActionPermissionFlag.DEFAULT, true);
+        settings.setUserId(getEntityId());
+
+        session.addToSendQueue(settings);
     }
 
     private void initializeGamerules() {
@@ -751,39 +760,43 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         });
     }
 
-    private void placeBlock(ItemUseTransaction transaction) {
-        // Sanity check:
-        ItemStack clientHand = transaction.getItem();
+    private void placeBlock(ItemUseTransaction itemUseTransaction) {
+        ItemStack clientInHand = itemUseTransaction.getItem();
 
+        // Sanity check:
         Optional<ItemStack> actuallyInHand = playerInventory.getStackInHand();
-        if (actuallyInHand.isPresent() && clientHand.getItemType() != actuallyInHand.get().getItemType() ||
-                !actuallyInHand.isPresent() && clientHand.getItemType() != BlockTypes.AIR) {
+        if (log.isDebugEnabled()) {
+            log.debug("Held: {}, slot: {}", actuallyInHand, playerInventory.getHeldHotbarSlot());
+        }
+
+        if ((actuallyInHand.isPresent() && actuallyInHand.get().getItemType() != clientInHand.getItemType()) ||
+                !actuallyInHand.isPresent() && clientInHand.getItemType() != BlockTypes.AIR) {
             // Not actually the same item.
             sendPlayerInventory();
             return;
         }
 
-        if (!actuallyInHand.isPresent()) return; // If there is nothing in hand then there is nothing to do.
+        if (!actuallyInHand.isPresent()) return;
 
         // What block is this item being used against?
-        Optional<Block> usedAgainst = getLevel().getBlockIfChunkLoaded(transaction.getPosition());
+        Optional<Block> usedAgainst = getLevel().getBlockIfChunkLoaded(itemUseTransaction.getPosition().toInt());
         if (!usedAgainst.isPresent()) {
             // Not loaded into memory.
             return;
         }
 
-        // Ask the block being checked. TODO: implement block replace event here
-        ItemStack serverInHand = actuallyInHand.get();
-        BlockFace face = BlockFace.values()[transaction.getFace()];
+        // Ask the block being checked.
+        ItemStack serverInHand = actuallyInHand.orElse(null);
+        BlockFace face = BlockFace.values()[itemUseTransaction.getFace()];
         BlockBehavior againstBehavior = BlockBehaviors.getBlockBehavior(usedAgainst.get().getBlockState().getBlockType());
-        switch (againstBehavior.handleItemInteraction(getServer(), PlayerSession.this, transaction.getPosition(), face, serverInHand)) {
+        switch (againstBehavior.handleItemInteraction(getServer(), PlayerSession.this, itemUseTransaction.getPosition(), face, serverInHand)) {
             case NOTHING:
                 // Update inventory
                 sendPlayerInventory();
                 return;
             case PLACE_BLOCK_AND_REMOVE_ITEM:
                 Preconditions.checkState(serverInHand.getItemType() instanceof BlockType, "Tried to place air or non-block.");
-                if (!BehaviorUtils.setBlockState(PlayerSession.this, transaction.getPosition().add(face.getOffset()), BehaviorUtils.createBlockState(usedAgainst.get().getLevelLocation(), face, serverInHand))) {
+                if (!BehaviorUtils.setBlockState(PlayerSession.this, itemUseTransaction.getPosition().add(face.getOffset()), BehaviorUtils.createBlockState(usedAgainst.get().getLevelLocation(), face, serverInHand))) {
                     sendPlayerInventory();
                     break;
                 }
@@ -800,6 +813,24 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                 // TODO: Implement
                 break;
         }
+    }
+
+    public void handledropItem(WorldInteractionTransactionRecord record) {
+
+        if (record.getOldItem().getItemType() == BlockTypes.AIR) {
+            return;
+        }
+
+        // TODO: Events
+        Optional<ItemStack> stackOptional = playerInventory.getStackInHand();
+        if (!stackOptional.isPresent()) {
+            sendPlayerInventory();
+            return;
+        }
+
+        DroppedItem item = new VoxelwindDroppedItem(getLevel(), getPosition().add(0, 1.3, 0), getServer(), stackOptional.get());
+        item.setMotion(getDirectionVector().mul(0.4));
+        playerInventory.clearItem(playerInventory.getHeldInventorySlot());
     }
 
     public boolean isSpawned() {
@@ -847,12 +878,12 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                     sendMovePlayerPacket();
                     updatePlayerList();
 
-                    /*McpeAvailableCommands availableCommands = ((VoxelwindCommandManager) vwServer.getCommandManager())
+                    McpeAvailableCommands availableCommands = ((VoxelwindCommandManager) vwServer.getCommandManager())
                             .generateAvailableCommandsPacket();
 
                     McpeWrapper availableCommandsWrapper = new McpeWrapper();
                     availableCommandsWrapper.getPackets().add(availableCommands);
-                    session.sendImmediatePackage(availableCommandsWrapper);*/
+                    session.sendImmediatePackage(availableCommandsWrapper);
 
                     spawned = true;
 
@@ -959,6 +990,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
 
             packet.setSource(getName());
             packet.setNeedsTranslation(false); // Deal with this later.
+            packet.setXuid(Long.toString(session.getAuthenticationProfile().getXuid()));
             // By default, queue this packet for all players in the world.
             getLevel().getPacketManager().queuePacketForPlayers(packet);
         }
@@ -979,6 +1011,11 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                 setPosition(originalPosition);
                 setRotation(packet.getRotation());
                 return;
+            }
+
+            if (flying && packet.isOnGround()) {
+                PlayerData data = ensureAndGet(PlayerData.class);
+                data.setFlying(false);
             }
 
             setPosition(newPosition);
@@ -1070,61 +1107,10 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
             playerInventory.setHeldHotbarSlot(packet.getHotbarSlot(), false);
         }
 
-        /*private void placeBlock(ItemUseTransaction itemUseTransaction) {
-            // Sanity check:
-            Optional<ItemStack> actuallyInHand = playerInventory.getStackInHand();
-            if (log.isDebugEnabled()) {
-                log.debug("Held: {}, slot: {}", actuallyInHand, playerInventory.getHeldHotbarSlot());
-            }
-            if ((actuallyInHand.isPresent() && actuallyInHand.get().getItemType() != packet.getStack().getItemType()) ||
-                    !actuallyInHand.isPresent() && packet.getStack().getItemType() == BlockTypes.AIR) {
-                // Not actually the same item.
-                return;
-            }
-
-            // What block is this item being used against?
-            Optional<Block> usedAgainst = getLevel().getBlockIfChunkLoaded(itemUseTransaction.getClickPosition().toInt());
-            if (!usedAgainst.isPresent()) {
-                // Not loaded into memory.
-                return;
-            }
-
-            // Ask the block being checked.
-            ItemStack serverInHand = actuallyInHand.orElse(null);
-            BlockFace face = BlockFace.values()[itemUseTransaction.getFace()];
-            BlockBehavior againstBehavior = BlockBehaviors.getBlockBehavior(usedAgainst.get().getBlockState().getBlockType());
-            switch (againstBehavior.handleItemInteraction(getServer(), PlayerSession.this, itemUseTransaction.getClickPosition().toInt(), face, serverInHand)) {
-                case NOTHING:
-                    // Update inventory
-                    sendPlayerInventory();
-                    return;
-                case PLACE_BLOCK_AND_REMOVE_ITEM:
-                    Preconditions.checkState(serverInHand != null && serverInHand.getItemType() instanceof BlockType, "Tried to place air or non-block.");
-                    if (!BehaviorUtils.setBlockState(PlayerSession.this, itemUseTransaction.getClickPosition().toInt().add(face.getOffset()), BehaviorUtils.createBlockState(usedAgainst.get().getLevelLocation(), face, serverInHand))) {
-                        sendPlayerInventory();
-                        break;
-                    }
-                    // This will fall through
-                /*case REMOVE_ONE_ITEM:
-                    if (serverInHand != null) {
-                        int newItemAmount = serverInHand.getAmount() - 1;
-                        if (newItemAmount <= 0) {
-                            playerInventory.clearItem(playerInventory.getHeldInventorySlot());
-                        } else {
-                            playerInventory.setItem(playerInventory.getHeldInventorySlot(), serverInHand.toBuilder().amount(newItemAmount).build());
-                        }
-                    }
-                    break;
-                case REDUCE_DURABILITY:
-                    // TODO: Implement
-                    break;
-            }
-        }*/
-
         @Override
         public void handle(McpeAdventureSettings packet) {
             int flags = packet.getFlags();
-            flying = (flags & 0x200) == 0x200;
+            flying = ((flags & 0x200) == 0x200);
         }
 
         @Override
@@ -1139,22 +1125,24 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
 
         @Override
         public void handle(NormalTransaction transaction) {
-            // TODO
+            for (TransactionRecord transactionRecord : transaction.getRecords()) {
+                transactionRecord.execute(PlayerSession.this);
+            }
         }
 
         @Override
         public void handle(InventoryMismatchTransaction transaction) {
-            // TODO
+
         }
 
         @Override
         public void handle(ItemUseTransaction transaction) {
-            switch (transaction.getActionType()) {
+            switch (transaction.getAction()) {
                 case USE:
-                    return;
+                    break;
                 case PLACE:
                     placeBlock(transaction);
-                    return;
+                    break;
                 case BREAK:
                     breakBlock(transaction.getPosition());
                     break;
@@ -1163,36 +1151,13 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
 
         @Override
         public void handle(ItemUseOnEntityTransaction transaction) {
-            // TODO
+
         }
 
         @Override
         public void handle(ItemReleaseTransaction transaction) {
-            // TODO
+
         }
-
-        /*@Override
-        public void handle(McpeDropItem packet) {
-            Health health = ensureAndGet(Health.class);
-            if (!spawned || health.isDead()) {
-                return;
-            }
-
-            if (packet.getItem().getItemType() == BlockTypes.AIR) {
-                return;
-            }
-
-            // TODO: Events
-            Optional<ItemStack> stackOptional = playerInventory.getStackInHand();
-            if (!stackOptional.isPresent()) {
-                sendPlayerInventory();
-                return;
-            }
-
-            DroppedItem item = new VoxelwindDroppedItem(getLevel(), getPosition().add(0, 1.3, 0), getServer(), stackOptional.get());
-            item.setMotion(getDirectionVector().mul(0.4));
-            playerInventory.clearItem(playerInventory.getHeldInventorySlot());
-        } TODO */
 
         @Override
         public void handle(McpeResourcePackClientResponse packet) {
@@ -1223,6 +1188,10 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                 log.debug("Unable to reconstruct command for packet {}", packet);
                 sendMessage(TextFormat.RED + "An error has occurred while running the command.");
                 return;
+            }
+
+            if (rawCommand.startsWith("/")) {
+                rawCommand = rawCommand.substring(1);
             }
             /*if (argsNode.getNodeType() == JsonNodeType.NULL) {
                 command = packet.getCommand();
@@ -1404,7 +1373,6 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
 
             // Update player list.
             session.updatePlayerList();
-
             boolean hungerTouched = ((PlayerDataComponent) playerData).hungerTouched();
             boolean attributesTouched = ((PlayerDataComponent) playerData).attributesTouched();
             boolean healthTouched = ((HealthComponent) health).needsUpdate();
@@ -1415,9 +1383,19 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
             }
 
             if (((PlayerDataComponent) playerData).gamemodeTouched()) {
-                McpeSetPlayerGameType gameMode = new McpeSetPlayerGameType();
-                gameMode.setGamemode(playerData.getGameMode().ordinal());
-                session.getMcpeSession().addToSendQueue(gameMode);
+                //Set gamemode's default adventure settings.
+                GameMode gameMode = playerData.getGameMode();
+                playerData.setAllowedToFly(gameMode.isAllowedToFly());
+                playerData.setImmutableWorld(gameMode.isImmutableWorld());
+                playerData.setNoClip(gameMode.isNoClip());
+
+                McpeSetPlayerGameType setGameMode = new McpeSetPlayerGameType();
+                setGameMode.setGamemode(gameMode.ordinal());
+                session.getMcpeSession().addToSendQueue(setGameMode);
+            }
+
+            if (((PlayerDataComponent) playerData).adventureSettingsTouched()) {
+                session.sendAdventureSettings();
             }
         }
     }

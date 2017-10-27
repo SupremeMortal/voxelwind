@@ -3,6 +3,7 @@ package com.voxelwind.server.game.inventories.transaction.record;
 import com.voxelwind.api.game.item.ItemStack;
 import com.voxelwind.nbt.util.Varints;
 import com.voxelwind.server.network.mcpe.McpeUtil;
+import com.voxelwind.server.network.session.PlayerSession;
 import io.netty.buffer.ByteBuf;
 import lombok.Data;
 
@@ -23,5 +24,7 @@ public abstract class TransactionRecord{
         oldItem = McpeUtil.readItemStack(buffer);
         newItem = McpeUtil.readItemStack(buffer);
     }
+
+    public abstract void execute(PlayerSession session);
 }
 

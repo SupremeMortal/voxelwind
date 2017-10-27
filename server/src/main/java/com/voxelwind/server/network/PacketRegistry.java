@@ -115,6 +115,7 @@ public class PacketRegistry {
         MCPE_PACKETS[0x4c] = McpeAvailableCommands.class;
         MCPE_PACKETS[0x4d] = McpeCommandRequest.class; //McpeCommandStep.class
         //MCPE_PACKETS[0x4e] = McpeCommandBlockUpdate.class;
+        //MCPE_PACKETS[0x4f] = McpeCommandOutput.class;
         //MCPE_PACKETS[0x50] = McpeUpdateTrade.class;
         //MCPE_PACKETS[0x51] = McpeUpdateEquip.class;
         //MCPE_PACKETS[0x52] = McpeResourcePackDataInfo.class;
