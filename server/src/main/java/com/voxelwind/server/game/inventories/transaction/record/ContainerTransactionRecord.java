@@ -27,6 +27,6 @@ public class ContainerTransactionRecord extends TransactionRecord{
 
     @Override
     public void execute(PlayerSession session) {
-        // TODO
+        session.getInventory().setItem (getSlot(), getNewItem());
     }
 }
