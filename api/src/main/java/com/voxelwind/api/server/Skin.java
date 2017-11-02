@@ -23,7 +23,7 @@ public class Skin {
     @NonNull
     private final String geometryName;
     @NonNull
-    private final String geometryData;
+    private final byte[] geometryData;
 
     @Nonnull
     @ParametersAreNonnullByDefault

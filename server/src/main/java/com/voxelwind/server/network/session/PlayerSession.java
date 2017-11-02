@@ -46,6 +46,7 @@ import com.voxelwind.server.game.inventories.*;
 import com.voxelwind.server.game.inventories.transaction.*;
 import com.voxelwind.server.game.inventories.transaction.record.TransactionRecord;
 import com.voxelwind.server.game.inventories.transaction.record.WorldInteractionTransactionRecord;
+import com.voxelwind.server.game.item.VoxelwindItemStack;
 import com.voxelwind.server.game.level.VoxelwindLevel;
 import com.voxelwind.server.game.level.block.BasicBlockState;
 import com.voxelwind.server.game.level.block.BlockBehavior;
@@ -60,6 +61,7 @@ import com.voxelwind.server.network.NetworkPackage;
 import com.voxelwind.server.network.mcpe.packets.*;
 import com.voxelwind.server.network.mcpe.util.ActionPermissionFlag;
 import com.voxelwind.server.network.raknet.handler.NetworkPacketHandler;
+import com.voxelwind.server.network.session.auth.PlayerRecord;
 import gnu.trove.set.TLongSet;
 import gnu.trove.set.hash.TLongHashSet;
 import lombok.extern.log4j.Log4j2;
@@ -776,17 +778,15 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
             return;
         }
 
-        if (!actuallyInHand.isPresent()) return;
-
         // What block is this item being used against?
-        Optional<Block> usedAgainst = getLevel().getBlockIfChunkLoaded(itemUseTransaction.getPosition().toInt());
+        Optional<Block> usedAgainst = getLevel().getBlockIfChunkLoaded(itemUseTransaction.getPosition());
         if (!usedAgainst.isPresent()) {
             // Not loaded into memory.
             return;
         }
 
         // Ask the block being checked.
-        ItemStack serverInHand = actuallyInHand.orElse(null);
+        ItemStack serverInHand = actuallyInHand.orElse(new VoxelwindItemStack(BlockTypes.AIR, 1, null));
         BlockFace face = BlockFace.values()[itemUseTransaction.getFace()];
         BlockBehavior againstBehavior = BlockBehaviors.getBlockBehavior(usedAgainst.get().getBlockState().getBlockType());
         switch (againstBehavior.handleItemInteraction(getServer(), PlayerSession.this, itemUseTransaction.getPosition(), face, serverInHand)) {
@@ -1283,7 +1283,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                 list.setType((byte) 0);
                 for (Player player : toAdd) {
                     PlayerData data = ensureAndGet(PlayerData.class);
-                    McpePlayerList.Record record = new McpePlayerList.Record(player.getUniqueId());
+                    PlayerRecord record = new PlayerRecord(player.getUniqueId());
                     record.setEntityId(player.getEntityId());
                     record.setSkin(data.getSkin());
                     record.setName(player.getName());
@@ -1299,7 +1299,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                 McpePlayerList list = new McpePlayerList();
                 list.setType((byte) 1);
                 for (UUID uuid : toRemove) {
-                    list.getRecords().add(new McpePlayerList.Record(uuid));
+                    list.getRecords().add(new PlayerRecord(uuid));
                 }
                 session.addToSendQueue(list);
             }

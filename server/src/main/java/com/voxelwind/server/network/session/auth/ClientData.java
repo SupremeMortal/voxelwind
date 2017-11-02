@@ -34,7 +34,7 @@ public class ClientData {
     @JsonProperty("SkinData")
     private final byte[] skinData; // Jackson conveniently deserializes from Base64
     @JsonProperty("SkinGeometry")
-    private final String skinGeometry;
+    private final byte[] skinGeometry; // deserialized
     @JsonProperty("SkinGeometryName")
     private final String skinGeometryName;
     @JsonProperty("SkinId")
