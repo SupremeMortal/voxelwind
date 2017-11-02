@@ -22,6 +22,7 @@ import com.voxelwind.server.game.item.VoxelwindNBTUtils;
 import com.voxelwind.server.game.level.util.EntityAttribute;
 import com.voxelwind.server.game.level.util.PlayerAttribute;
 import com.voxelwind.server.game.serializer.MetadataSerializer;
+import com.voxelwind.server.network.mcpe.util.CommandOriginData;
 import com.voxelwind.server.network.mcpe.util.ResourcePackInfo;
 import com.voxelwind.server.network.util.LittleEndianByteBufInputStream;
 import com.voxelwind.server.network.util.LittleEndianByteBufOutputStream;
@@ -164,13 +165,15 @@ public class McpeUtil {
     public static void writeSkin(ByteBuf buf, Skin skin) {
         byte[] skinData = skin.getSkinData();
         byte[] capeData = skin.getCapeData();
+        byte[] geometryData = skin.getGeometryData();
         writeVarintLengthString(buf, skin.getSkinId());
         Varints.encodeUnsigned(buf, skinData.length);
         buf.writeBytes(skinData);
         Varints.encodeUnsigned(buf, capeData.length);
         buf.writeBytes(capeData);
         writeVarintLengthString(buf, skin.getGeometryName());
-        writeVarintLengthString(buf, skin.getGeometryData());
+        Varints.encodeUnsigned(buf, geometryData.length);
+        buf.writeBytes(geometryData);
     }
 
     public static TranslatedMessage readTranslatedMessage(ByteBuf buf) {
@@ -318,5 +321,16 @@ public class McpeUtil {
         String v = readVarintLengthString(buf);
         long unknown = buf.readLong();
         return new ResourcePackInfo(pid, v, unknown);
+    }
+
+    public static CommandOriginData readCommandOriginData(ByteBuf buf) {
+        CommandOriginData.Origin origin = CommandOriginData.Origin.values()[(int) Varints.decodeUnsigned(buf)];
+        UUID uuid = readUuid(buf);
+        String requestId = readVarintLengthString(buf);
+        Long varLong = null;
+        if (origin == CommandOriginData.Origin.DEV_CONSOLE || origin == CommandOriginData.Origin.TEST) {
+            varLong = Varints.decodeSignedLong(buf);
+        }
+        return new CommandOriginData(origin, uuid, requestId, varLong);
     }
 }
