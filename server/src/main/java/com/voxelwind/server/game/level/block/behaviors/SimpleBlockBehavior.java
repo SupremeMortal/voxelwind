@@ -29,7 +29,7 @@ public class SimpleBlockBehavior implements BlockBehavior {
 
     @Override
     public boolean handlePlacement(Server server, Player player, Vector3i against, BlockFace face, @Nullable ItemStack withItem) {
-        return true;
+        return player.getInventory().getHeldInventorySlot() != -1;
     }
 
     @Override

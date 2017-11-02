@@ -10,6 +10,7 @@ public class McpePlayerHotbar implements NetworkPackage{
     private int selectedSlot;
     private byte windowId;
     private int[] hotbarData = new int[0];
+    private boolean selectHotbarSlot;
 
     @Override
     public void decode(ByteBuf buffer) {
@@ -20,6 +21,7 @@ public class McpePlayerHotbar implements NetworkPackage{
         for (int i = 0; i < hotbarEntriesToRead; i++) {
             hotbarData[i] = Varints.decodeSigned(buffer);
         }
+        selectHotbarSlot = buffer.readBoolean();
     }
 
     @Override
@@ -30,5 +32,6 @@ public class McpePlayerHotbar implements NetworkPackage{
         for (int i : hotbarData) {
             Varints.encodeSigned(buffer, i);
         }
+        buffer.writeBoolean(selectHotbarSlot);
     }
 }
