@@ -368,7 +368,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
 
     @Override
     public void sendMessage(@Nonnull String message) {
-        sendMessage(message, PlayerMessageDisplayType.RAW);
+        sendMessage(message, PlayerMessageDisplayType.CHAT);
     }
 
     public void updateViewableEntities() {
