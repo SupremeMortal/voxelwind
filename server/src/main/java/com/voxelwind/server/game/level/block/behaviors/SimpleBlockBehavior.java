@@ -4,6 +4,7 @@ import com.flowpowered.math.vector.Vector3i;
 import com.google.common.collect.ImmutableList;
 import com.voxelwind.api.game.item.ItemStack;
 import com.voxelwind.api.game.item.ItemStackBuilder;
+import com.voxelwind.api.game.item.data.GenericDamageValue;
 import com.voxelwind.api.game.level.block.Block;
 import com.voxelwind.api.game.util.data.BlockFace;
 import com.voxelwind.api.server.Player;
@@ -33,13 +34,17 @@ public class SimpleBlockBehavior implements BlockBehavior {
     }
 
     @Override
-    public boolean handleBreak(Server server, Player player, Block block, @Nullable ItemStack withItem) {
+    public BehaviorResult handleBreak(Server server, Player player, Block block, @Nullable ItemStack withItem) {
         if (!block.getBlockState().getBlockType().isDiggable()) {
-            return true;
+            return BehaviorResult.NOTHING;
+        }
+
+        if (withItem != null && withItem.getItemData().isPresent() && withItem.getItemData().get() instanceof GenericDamageValue) {
+            return BehaviorResult.REDUCE_DURABILITY;
         }
 
         // Continue with normal logic.
-        return false;
+        return BehaviorResult.BREAK_BLOCK;
     }
 
     @Override

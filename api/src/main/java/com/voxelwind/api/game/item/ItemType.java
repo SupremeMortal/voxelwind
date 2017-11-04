@@ -15,4 +15,6 @@ public interface ItemType {
     Class<? extends Metadata> getMetadataClass();
 
     int getMaximumStackSize();
+
+    Metadata defaultMetadata();
 }

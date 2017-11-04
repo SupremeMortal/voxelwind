@@ -16,5 +16,9 @@ public enum BehaviorResult {
     /**
      * The durability of the item should be reduced.
      */
-    REDUCE_DURABILITY
+    REDUCE_DURABILITY,
+    /**
+     * Block should be destroyed.
+     */
+    BREAK_BLOCK,
 }

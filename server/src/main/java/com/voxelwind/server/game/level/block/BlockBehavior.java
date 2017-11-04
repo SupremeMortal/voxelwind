@@ -17,7 +17,8 @@ import java.util.Optional;
 public interface BlockBehavior {
     boolean handlePlacement(Server server, Player player, Vector3i against, BlockFace face, @Nullable ItemStack withItem);
     BehaviorResult handleItemInteraction(Server server, Player player, Vector3i against, BlockFace face, ItemStack withItem);
-    boolean handleBreak(Server server, Player player, Block block, @Nullable ItemStack withItem);
+
+    BehaviorResult handleBreak(Server server, Player player, Block block, @Nullable ItemStack withItem);
     Collection<ItemStack> getDrops(Server server, Player player, Block block, @Nullable ItemStack withItem);
 
     default BoundingBox getBoundingBox(Block block) {

@@ -31,7 +31,7 @@ public class VoxelwindItemStack implements ItemStack {
     public VoxelwindItemStack(ItemType itemType, int amount, Metadata data, String itemName) {
         this.itemType = itemType;
         this.amount = amount;
-        this.data = data;
+        this.data = (data == null ? itemType.defaultMetadata() : data);
         this.itemName = itemName;
     }
 

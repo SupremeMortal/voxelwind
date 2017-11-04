@@ -15,6 +15,7 @@ import com.voxelwind.api.game.inventories.Inventory;
 import com.voxelwind.api.game.inventories.OpenableInventory;
 import com.voxelwind.api.game.inventories.PlayerInventory;
 import com.voxelwind.api.game.item.ItemStack;
+import com.voxelwind.api.game.item.data.GenericDamageValue;
 import com.voxelwind.api.game.level.Chunk;
 import com.voxelwind.api.game.level.Level;
 import com.voxelwind.api.game.level.block.Block;
@@ -367,12 +368,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
 
     @Override
     public void sendMessage(@Nonnull String message) {
-        Preconditions.checkNotNull(message, "message");
-        McpeText text = new McpeText();
-        text.setType(McpeText.TextType.RAW);
-        text.setXuid(Long.toString(session.getAuthenticationProfile().getXuid()));
-        text.setMessage(message);
-        session.addToSendQueue(text);
+        sendMessage(message, PlayerMessageDisplayType.RAW);
     }
 
     public void updateViewableEntities() {
@@ -577,14 +573,14 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         if (inventory == openedInventory) {
             windowId = openInventoryId;
         } else if (inventory instanceof PlayerInventory) {
-            windowId = 0x00;
+            windowId = ContainerIds.INVENTORY;
         } else {
             return;
         }
 
         if (session != this) {
             McpeInventorySlot packet = new McpeInventorySlot();
-            packet.setSlot((short) slot);
+            packet.setSlot(slot);
             packet.setStack(newItem);
             packet.setInventoryId(windowId);
             this.session.addToSendQueue(packet);
@@ -614,13 +610,19 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         if (event.getResult() == BlockReplaceEvent.Result.CONTINUE) {
             if (playerData.getGameMode() != GameMode.CREATIVE) {
                 BlockBehavior blockBehavior = BlockBehaviors.getBlockBehavior(block.getBlockState().getBlockType());
-                if (!blockBehavior.handleBreak(getServer(), PlayerSession.this, block, playerInventory.getStackInHand().orElse(null))) {
+                switch (blockBehavior.handleBreak(getServer(), PlayerSession.this, block, playerInventory.getStackInHand().orElse(null))) {
+                    case REDUCE_DURABILITY:
+                        int damage = ((GenericDamageValue) playerInventory.getStackInHand().get().getItemData().get()).getDamage() + 1;
+                        playerInventory.getStackInHand().get().toBuilder().itemData(new GenericDamageValue((short) damage));
+                        // Intentional fall through
+                    case BREAK_BLOCK:
                     Collection<ItemStack> drops = blockBehavior.getDrops(getServer(), PlayerSession.this, block, playerInventory.getStackInHand().orElse(null));
                     for (ItemStack drop : drops) {
                         DroppedItem item = getLevel().dropItem(drop, block.getLevelLocation().toFloat().add(0.5, 0.5, 0.5));
                         item.ensureAndGet(PickupDelay.class).setDelayPickupTicks(5);
                     }
                     chunkOptional.get().setBlock(inChunkX, position.getY(), inChunkZ, new BasicBlockState(BlockTypes.AIR, null, null));
+                        break;
                 }
             } else {
                 chunkOptional.get().setBlock(inChunkX, position.getY(), inChunkZ, new BasicBlockState(BlockTypes.AIR, null, null));
@@ -661,10 +663,10 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         McpeSetEntityData dataPacket = new McpeSetEntityData();
         dataPacket.setRuntimeEntityId(getEntityId());
         dataPacket.getMetadata().putAll(getMetadata());
-        session.sendImmediatePackage(dataPacket);
+        session.addToSendQueue(dataPacket);
     }
 
-    private void sendPlayerInventory() {
+    public void sendPlayerInventory() {
         McpeInventoryContent initContents = new McpeInventoryContent();
         initContents.setInventoryId(0x7b);
         initContents.setStacks(new ItemStack[]{});
@@ -792,27 +794,25 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         switch (againstBehavior.handleItemInteraction(getServer(), PlayerSession.this, itemUseTransaction.getPosition(), face, serverInHand)) {
             case NOTHING:
                 // Update inventory
+                log.debug("Nothing");
                 sendPlayerInventory();
-                return;
+                break;
             case PLACE_BLOCK_AND_REMOVE_ITEM:
                 Preconditions.checkState(serverInHand.getItemType() instanceof BlockType, "Tried to place air or non-block.");
                 if (!BehaviorUtils.setBlockState(PlayerSession.this, itemUseTransaction.getPosition().add(face.getOffset()), BehaviorUtils.createBlockState(usedAgainst.get().getLevelLocation(), face, serverInHand))) {
+                    log.debug("Setblock state returned false.");
                     sendPlayerInventory();
-                    break;
-                }
-                // This will fall through
-            case REMOVE_ONE_ITEM:
-                int newItemAmount = serverInHand.getAmount() - 1;
-                if (newItemAmount <= 0) {
-                    playerInventory.clearItem(playerInventory.getHeldInventorySlot());
-                } else {
-                    playerInventory.setItem(playerInventory.getHeldInventorySlot(), serverInHand.toBuilder().amount(newItemAmount).build());
+                    return;
                 }
                 break;
             case REDUCE_DURABILITY:
                 // TODO: Implement
                 break;
         }
+    }
+
+    public void setCursorItem(ItemStack cursorItem, boolean sendToPlayer) {
+        playerInventory.setCursorItem(cursorItem, sendToPlayer);
     }
 
     public void handledropItem(WorldInteractionTransactionRecord record) {
@@ -1121,13 +1121,16 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
             }
 
             packet.getTransaction().handle(session);
+
+            // Execute records
+            for (TransactionRecord record : packet.getTransaction().getRecords()) {
+                record.execute(PlayerSession.this);
+            }
         }
 
         @Override
         public void handle(NormalTransaction transaction) {
-            for (TransactionRecord transactionRecord : transaction.getRecords()) {
-                transactionRecord.execute(PlayerSession.this);
-            }
+            // Nothing happens here
         }
 
         @Override

@@ -3,6 +3,11 @@ package com.voxelwind.server.game.inventories;
 import com.voxelwind.api.game.inventories.InventoryType;
 import com.voxelwind.api.game.inventories.PlayerInventory;
 import com.voxelwind.api.game.item.ItemStack;
+import com.voxelwind.server.game.inventories.transaction.ContainerIds;
+import com.voxelwind.server.game.inventories.transaction.InventoryTransaction;
+import com.voxelwind.server.game.inventories.transaction.NormalTransaction;
+import com.voxelwind.server.game.inventories.transaction.record.ContainerTransactionRecord;
+import com.voxelwind.server.network.mcpe.packets.McpeInventoryTransaction;
 import com.voxelwind.server.network.mcpe.packets.McpeMobEquipment;
 import com.voxelwind.server.network.session.PlayerSession;
 
@@ -13,6 +18,7 @@ public class VoxelwindBasePlayerInventory extends VoxelwindBaseInventory impleme
     private final PlayerSession session;
     private final int[] hotbarLinks = new int[9];
     private int heldHotbarSlot = -1;
+    private ItemStack cursorItem = null;
 
     public VoxelwindBasePlayerInventory(PlayerSession session) {
         // TODO: Verify
@@ -72,5 +78,27 @@ public class VoxelwindBasePlayerInventory extends VoxelwindBaseInventory impleme
         equipmentForAll.setInventorySlot((byte) hotbarLinks[hotbarSlot]);
         equipmentForAll.setStack(getStackInHand().orElse(null));
         session.getLevel().getPacketManager().queuePacketForViewers(session, equipmentForAll);
+    }
+
+    @Override
+    public Optional<ItemStack> getCursorItem() {
+        return Optional.ofNullable(cursorItem);
+    }
+
+    public void setCursorItem(ItemStack cursorItem, boolean sendToPlayer) {
+        if (sendToPlayer) {
+            McpeInventoryTransaction inventoryTransaction = new McpeInventoryTransaction();
+            ContainerTransactionRecord containerRecord = new ContainerTransactionRecord();
+            containerRecord.setInventoryId(ContainerIds.CURSOR);
+            containerRecord.setOldItem(this.cursorItem);
+            containerRecord.setNewItem(cursorItem);
+            containerRecord.setSlot(0);
+            InventoryTransaction transaction = new NormalTransaction();
+            transaction.getRecords().add(containerRecord);
+            inventoryTransaction.setTransaction(transaction);
+            session.getMcpeSession().addToSendQueue(inventoryTransaction);
+        }
+
+        this.cursorItem = cursorItem;
     }
 }

@@ -15,4 +15,6 @@ public interface PlayerInventory extends Inventory {
     int getHeldInventorySlot();
 
     Optional<ItemStack> getStackInHand();
+
+    Optional<ItemStack> getCursorItem();
 }
