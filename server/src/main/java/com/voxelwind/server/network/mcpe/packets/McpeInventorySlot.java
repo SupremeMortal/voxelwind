@@ -15,15 +15,15 @@ public class McpeInventorySlot implements NetworkPackage {
 
     @Override
     public void decode(ByteBuf buffer) {
-        inventoryId = Varints.decodeSigned(buffer);
-        slot = Varints.decodeSigned(buffer);
+        inventoryId = (int) Varints.decodeUnsigned(buffer);
+        slot = (int) Varints.decodeUnsigned(buffer);
         stack = McpeUtil.readItemStack(buffer);
     }
 
     @Override
     public void encode(ByteBuf buffer) {
-        Varints.encodeSigned(buffer, inventoryId);
-        Varints.encodeSigned(buffer, slot);
+        Varints.encodeUnsigned(buffer, inventoryId);
+        Varints.encodeUnsigned(buffer, slot);
         McpeUtil.writeItemStack(buffer, stack);
     }
 }
