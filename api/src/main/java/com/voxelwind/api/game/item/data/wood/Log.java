@@ -44,7 +44,7 @@ public class Log extends Wood {
     @Override
     public String toString() {
         return "Log{" +
-                "species=" + getDirection() + ',' +
+                "species=" + getSpecies() + ',' +
                 "direction=" + direction +
                 '}';
     }
