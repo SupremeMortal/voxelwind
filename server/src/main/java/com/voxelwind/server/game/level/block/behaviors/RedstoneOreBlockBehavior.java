@@ -2,6 +2,7 @@ package com.voxelwind.server.game.level.block.behaviors;
 
 import com.google.common.collect.ImmutableList;
 import com.voxelwind.api.game.item.ItemStack;
+import com.voxelwind.api.game.item.ItemType;
 import com.voxelwind.api.game.item.ItemTypes;
 import com.voxelwind.api.game.level.block.Block;
 import com.voxelwind.api.server.Player;
@@ -11,12 +12,16 @@ import lombok.NoArgsConstructor;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.List;
 import java.util.Random;
 
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
-public class RedstoneOreBlockBehavior extends SimpleBlockBehavior {
+public class RedstoneOreBlockBehavior extends DroppableBySpecificToolsBlockBehavior {
     public static final RedstoneOreBlockBehavior INSTANCE = new RedstoneOreBlockBehavior();
     private static final Random RANDOM = new Random();
+
+    private RedstoneOreBlockBehavior() {
+        super(ALL_IRON_PICKAXES);
+    }
 
     @Override
     public Collection<ItemStack> getDrops(Server server, Player player, Block block, @Nullable ItemStack withItem) {
