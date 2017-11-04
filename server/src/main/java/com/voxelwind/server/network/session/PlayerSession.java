@@ -634,6 +634,8 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
             }
         }
 
+        int blockMetadata = MetadataSerializer.serializeMetadata(block.getBlockState());
+        getLevel().broadcastLevelEvent(LevelEventConstants.EVENT_PARTICLE_DESTROY, position.toFloat(), block.getBlockState().getBlockType().getId() | blockMetadata << 8);
         getLevel().broadcastBlockUpdate(position);
     }
 
