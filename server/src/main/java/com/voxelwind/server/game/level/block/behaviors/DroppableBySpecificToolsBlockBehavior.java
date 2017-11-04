@@ -15,24 +15,16 @@ import java.util.List;
 
 import static com.voxelwind.api.game.item.ItemTypes.*;
 
-public class DroppableBySpecificToolsBlockBehavior extends SimpleBlockBehavior {
-    public static final BlockBehavior ALL_PICKAXES = new DroppableBySpecificToolsBlockBehavior(ImmutableList.of(WOODEN_PICKAXE, DIAMOND_PICKAXE,
-            GOLDEN_PICKAXE, IRON_PICKAXE, STONE_PICKAXE));
-    public static final BlockBehavior ALL_STONE_PICKAXES = new DroppableBySpecificToolsBlockBehavior(ImmutableList.of(DIAMOND_PICKAXE,
-            GOLDEN_PICKAXE, IRON_PICKAXE, STONE_PICKAXE));
-    public static final BlockBehavior ALL_IRON_PICKAXES = new DroppableBySpecificToolsBlockBehavior(ImmutableList.of(DIAMOND_PICKAXE,
-            GOLDEN_PICKAXE, IRON_PICKAXE));
-    public static final BlockBehavior ALL_GOLD_PICKAXES = new DroppableBySpecificToolsBlockBehavior(ImmutableList.of(DIAMOND_PICKAXE,
-            GOLDEN_PICKAXE));
-    public static final BlockBehavior DIAMOND_PICKAXES = new DroppableBySpecificToolsBlockBehavior(ImmutableList.of(DIAMOND_PICKAXE,
-            GOLDEN_PICKAXE));
-    public static final BlockBehavior SHEARS_ONLY = new DroppableBySpecificToolsBlockBehavior(ImmutableList.of(SHEARS));
-
-    private final List<ItemType> allowedTypes;
+public class DroppableBySpecificToolsBlockBehavior extends DecreaseBreakTimeBySpecificToolsBehaviour {
+    public static final List<ItemType> ALL_PICKAXES = ImmutableList.of(WOODEN_PICKAXE, DIAMOND_PICKAXE, GOLDEN_PICKAXE, IRON_PICKAXE, STONE_PICKAXE);
+    public static final List<ItemType> ALL_STONE_PICKAXES = ImmutableList.of(DIAMOND_PICKAXE, GOLDEN_PICKAXE, IRON_PICKAXE, STONE_PICKAXE);
+    public static final List<ItemType> ALL_IRON_PICKAXES = ImmutableList.of(DIAMOND_PICKAXE, GOLDEN_PICKAXE, IRON_PICKAXE);
+    public static final List<ItemType> ALL_GOLD_PICKAXES = ImmutableList.of(DIAMOND_PICKAXE, GOLDEN_PICKAXE);
+    public static final List<ItemType> DIAMOND_PICKAXES = ImmutableList.of(DIAMOND_PICKAXE, GOLDEN_PICKAXE);
+    public static final List<ItemType> SHEARS_ONLY = ImmutableList.of(SHEARS);
 
     public DroppableBySpecificToolsBlockBehavior(List<ItemType> allowedTypes) {
-        Preconditions.checkNotNull(allowedTypes, "allowedTypes");
-        this.allowedTypes = allowedTypes;
+        super(allowedTypes);
     }
 
     @Override

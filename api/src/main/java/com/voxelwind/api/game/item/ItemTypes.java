@@ -16,9 +16,9 @@ public class ItemTypes {
     private static TIntObjectMap<ItemType> BY_ID = new TIntObjectHashMap<>(206);
     private static final Metadata damageValue = new GenericDamageValue((short) 0);
 
-    public static final ItemType IRON_SHOVEL = new IntItem(256, "iron_shovel", 1, GenericDamageValue.class, damageValue);
-    public static final ItemType IRON_PICKAXE = new IntItem(257, "iron_pickaxe", 1, GenericDamageValue.class, damageValue);
-    public static final ItemType IRON_AXE = new IntItem(258, "iron_axe", 1, GenericDamageValue.class, damageValue);
+    public static final ItemType IRON_SHOVEL = new ToolItem(256, "iron_shovel", 1, GenericDamageValue.class, MaterialType.IRON, damageValue);
+    public static final ItemType IRON_PICKAXE = new ToolItem(257, "iron_pickaxe", 1, GenericDamageValue.class, MaterialType.IRON, damageValue);
+    public static final ItemType IRON_AXE = new ToolItem(258, "iron_axe", 1, GenericDamageValue.class, MaterialType.IRON, damageValue);
     public static final ItemType FLINT_AND_STEEL = new IntItem(259, "flint_and_steel", 1, GenericDamageValue.class, damageValue);
     public static final ItemType APPLE = new IntItem(260, "apple", 64, null, null);
     public static final ItemType BOW = new IntItem(261, "bow", 1, GenericDamageValue.class, damageValue);
@@ -27,34 +27,34 @@ public class ItemTypes {
     public static final ItemType DIAMOND = new IntItem(264, "diamond", 64, null, null);
     public static final ItemType IRON_INGOT = new IntItem(265, "iron_ingot", 64, null, null);
     public static final ItemType GOLD_INGOT = new IntItem(266, "gold_ingot", 64, null, null);
-    public static final ItemType IRON_SWORD = new IntItem(267, "iron_sword", 1, null, null);
-    public static final ItemType WOODEN_SWORD = new IntItem(268, "wooden_sword", 1, GenericDamageValue.class, damageValue);
-    public static final ItemType WOODEN_SHOVEL = new IntItem(269, "wooden_shovel", 1, GenericDamageValue.class, damageValue);
-    public static final ItemType WOODEN_PICKAXE = new IntItem(270, "wooden_pickaxe", 1, GenericDamageValue.class, damageValue);
-    public static final ItemType WOODEN_AXE = new IntItem(271, "wooden_axe", 1, GenericDamageValue.class, damageValue);
-    public static final ItemType STONE_SWORD = new IntItem(272, "stone_sword", 1, GenericDamageValue.class, damageValue);
-    public static final ItemType STONE_SHOVEL = new IntItem(273, "stone_shovel", 1, GenericDamageValue.class, damageValue);
-    public static final ItemType STONE_PICKAXE = new IntItem(274, "stone_pickaxe", 1, GenericDamageValue.class, damageValue);
-    public static final ItemType STONE_AXE = new IntItem(275, "stone_axe", 1, GenericDamageValue.class, damageValue);
-    public static final ItemType DIAMOND_SWORD = new IntItem(276, "diamond_sword", 1, GenericDamageValue.class, damageValue);
-    public static final ItemType DIAMOND_SHOVEL = new IntItem(277, "diamond_shovel", 1, GenericDamageValue.class, damageValue);
-    public static final ItemType DIAMOND_PICKAXE = new IntItem(278, "diamond_pickaxe", 1, GenericDamageValue.class, damageValue);
-    public static final ItemType DIAMOND_AXE = new IntItem(279, "diamond_axe", 1, GenericDamageValue.class, damageValue);
+    public static final ItemType IRON_SWORD = new ToolItem(267, "iron_sword", 1, null, MaterialType.IRON, null);
+    public static final ItemType WOODEN_SWORD = new ToolItem(268, "wooden_sword", 1, GenericDamageValue.class, MaterialType.WOOD, damageValue);
+    public static final ItemType WOODEN_SHOVEL = new ToolItem(269, "wooden_shovel", 1, GenericDamageValue.class, MaterialType.WOOD, damageValue);
+    public static final ItemType WOODEN_PICKAXE = new ToolItem(270, "wooden_pickaxe", 1, GenericDamageValue.class, MaterialType.WOOD, damageValue);
+    public static final ItemType WOODEN_AXE = new ToolItem(271, "wooden_axe", 1, GenericDamageValue.class, MaterialType.WOOD, damageValue);
+    public static final ItemType STONE_SWORD = new ToolItem(272, "stone_sword", 1, GenericDamageValue.class, MaterialType.STONE, damageValue);
+    public static final ItemType STONE_SHOVEL = new ToolItem(273, "stone_shovel", 1, GenericDamageValue.class, MaterialType.STONE, damageValue);
+    public static final ItemType STONE_PICKAXE = new ToolItem(274, "stone_pickaxe", 1, GenericDamageValue.class, MaterialType.STONE, damageValue);
+    public static final ItemType STONE_AXE = new ToolItem(275, "stone_axe", 1, GenericDamageValue.class, MaterialType.STONE, damageValue);
+    public static final ItemType DIAMOND_SWORD = new ToolItem(276, "diamond_sword", 1, GenericDamageValue.class, MaterialType.DIAMOND, damageValue);
+    public static final ItemType DIAMOND_SHOVEL = new ToolItem(277, "diamond_shovel", 1, GenericDamageValue.class, MaterialType.DIAMOND, damageValue);
+    public static final ItemType DIAMOND_PICKAXE = new ToolItem(278, "diamond_pickaxe", 1, GenericDamageValue.class, MaterialType.DIAMOND, damageValue);
+    public static final ItemType DIAMOND_AXE = new ToolItem(279, "diamond_axe", 1, GenericDamageValue.class, MaterialType.DIAMOND, damageValue);
     public static final ItemType STICK = new IntItem(280, "stick", 64, null, null);
     public static final ItemType BOWL = new IntItem(281, "bowl", 64, null, null);
     public static final ItemType MUSHROOM_STEW = new IntItem(282, "mushroom_stew", 1, null, null);
-    public static final ItemType GOLDEN_SWORD = new IntItem(283, "golden_sword", 1, GenericDamageValue.class, damageValue);
-    public static final ItemType GOLDEN_SHOVEL = new IntItem(284, "golden_shovel", 1, GenericDamageValue.class, damageValue);
-    public static final ItemType GOLDEN_PICKAXE = new IntItem(285, "golden_pickaxe", 1, GenericDamageValue.class, damageValue);
-    public static final ItemType GOLDEN_AXE = new IntItem(286, "golden_axe", 1, GenericDamageValue.class, damageValue);
+    public static final ItemType GOLDEN_SWORD = new ToolItem(283, "golden_sword", 1, GenericDamageValue.class, MaterialType.GOLD, damageValue);
+    public static final ItemType GOLDEN_SHOVEL = new ToolItem(284, "golden_shovel", 1, GenericDamageValue.class, MaterialType.GOLD, damageValue);
+    public static final ItemType GOLDEN_PICKAXE = new ToolItem(285, "golden_pickaxe", 1, GenericDamageValue.class, MaterialType.GOLD, damageValue);
+    public static final ItemType GOLDEN_AXE = new ToolItem(286, "golden_axe", 1, GenericDamageValue.class, MaterialType.GOLD, damageValue);
     public static final ItemType STRING = new IntItem(287, "string", 64, null, null);
     public static final ItemType FEATHER = new IntItem(288, "feather", 64, null, null);
     public static final ItemType GUNPOWDER = new IntItem(289, "gunpowder", 64, null, null);
-    public static final ItemType WOODEN_HOE = new IntItem(290, "wooden_hoe", 1, GenericDamageValue.class, damageValue);
-    public static final ItemType STONE_HOE = new IntItem(291, "stone_hoe", 1, GenericDamageValue.class, damageValue);
-    public static final ItemType IRON_HOE = new IntItem(292, "iron_hoe", 1, GenericDamageValue.class, damageValue);
-    public static final ItemType DIAMOND_HOE = new IntItem(293, "diamond_hoe", 1, GenericDamageValue.class, damageValue);
-    public static final ItemType GOLDEN_HOE = new IntItem(294, "golden_hoe", 1, GenericDamageValue.class, damageValue);
+    public static final ItemType WOODEN_HOE = new ToolItem(290, "wooden_hoe", 1, GenericDamageValue.class, MaterialType.WOOD, damageValue);
+    public static final ItemType STONE_HOE = new ToolItem(291, "stone_hoe", 1, GenericDamageValue.class, MaterialType.STONE, damageValue);
+    public static final ItemType IRON_HOE = new ToolItem(292, "iron_hoe", 1, GenericDamageValue.class, MaterialType.IRON, damageValue);
+    public static final ItemType DIAMOND_HOE = new ToolItem(293, "diamond_hoe", 1, GenericDamageValue.class, MaterialType.DIAMOND, damageValue);
+    public static final ItemType GOLDEN_HOE = new ToolItem(294, "golden_hoe", 1, GenericDamageValue.class, MaterialType.GOLD, damageValue);
     public static final ItemType SEEDS = new IntItem(295, "wheat_seeds", 64, null, null);
     public static final ItemType WHEAT = new IntItem(296, "wheat", 64, null, null);
     public static final ItemType BREAD = new IntItem(297, "bread", 64, null, null);
@@ -115,7 +115,7 @@ public class ItemTypes {
     public static final ItemType REDSTONE_REPEATER = new IntItem(356, "repeater", 64, null, null);
     public static final ItemType COOKIE = new IntItem(357, "cookie", 64, null, null);
     public static final ItemType FILLED_MAP = new IntItem(358, "map_filled", 64, null, null);
-    public static final ItemType SHEARS = new IntItem(359, "shears", 1, null, null);
+    public static final ItemType SHEARS = new ToolItem(359, "shears", 1, null, null, null);
     public static final ItemType MELON = new IntItem(360, "melon", 64, null, null);
     public static final ItemType PUMPKIN_SEEDS = new IntItem(361, "pumpkin_seeds", 64, null, null);
     public static final ItemType MELON_SEEDS = new IntItem(362, "melon_seeds", 64, null, null);
@@ -272,6 +272,11 @@ public class ItemTypes {
         }
 
         @Override
+        public boolean isTool() {
+            return false;
+        }
+
+        @Override
         public Class<? extends Metadata> getMetadataClass() {
             return data;
         }
@@ -289,6 +294,25 @@ public class ItemTypes {
         @Override
         public String toString() {
             return getName();
+        }
+    }
+
+    public static class ToolItem extends IntItem {
+        private final MaterialType materialType;
+
+        public ToolItem(int id, String name, int maxStackSize, Class<? extends Metadata> data, MaterialType materialType, Metadata defaultMetadata) {
+            super(id, name, maxStackSize, data, defaultMetadata);
+
+            this.materialType = materialType;
+        }
+
+        @Override
+        public boolean isTool() {
+            return true;
+        }
+
+        public MaterialType getMaterialType() {
+            return materialType;
         }
     }
 }

@@ -16,8 +16,12 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Optional;
 
-public class DirtBlockBehavior extends SimpleBlockBehavior {
+public class DirtBlockBehavior extends DecreaseBreakTimeBySpecificToolsBehaviour {
     public static final DirtBlockBehavior INSTANCE = new DirtBlockBehavior();
+
+    public DirtBlockBehavior() {
+        super(ALL_SHOVELS);
+    }
 
     @Override
     public BehaviorResult handleItemInteraction(Server server, Player player, Vector3i against, BlockFace face, ItemStack withItem) {

@@ -2,6 +2,7 @@ package com.voxelwind.server.game.level.block.behaviors;
 
 import com.google.common.collect.ImmutableList;
 import com.voxelwind.api.game.item.ItemStack;
+import com.voxelwind.api.game.item.ItemType;
 import com.voxelwind.api.game.item.ItemTypes;
 import com.voxelwind.api.game.level.block.Block;
 import com.voxelwind.api.server.Player;
@@ -10,9 +11,14 @@ import com.voxelwind.server.game.level.block.BlockBehavior;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.List;
 
-public class CobwebBlockBehavior extends SimpleBlockBehavior {
+public class CobwebBlockBehavior extends DecreaseBreakTimeBySpecificToolsBehaviour {
     public static final BlockBehavior INSTANCE = new CobwebBlockBehavior();
+
+    public CobwebBlockBehavior() {
+        super(ImmutableList.of(ItemTypes.WOODEN_SWORD, ItemTypes.STONE_SWORD, ItemTypes.IRON_SWORD, ItemTypes.GOLDEN_SWORD, ItemTypes.DIAMOND_SWORD, ItemTypes.SHEARS));
+    }
 
     @Override
     public Collection<ItemStack> getDrops(Server server, Player player, Block block, @Nullable ItemStack with) {

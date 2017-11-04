@@ -299,7 +299,7 @@ public class SectionedChunk extends SectionedChunkSnapshot implements Chunk, Ful
         ChunkSection section = getOrCreateSection(y / 16);
         BlockType ourType = BlockTypes.forId(section.getBlockId(x, y % 16, z));
         byte currentBlockLight = section.getBlockLight(x, y % 16, z);
-        byte newBlockLight = (byte) ourType.emitsLight();
+        byte newBlockLight = (byte) ourType.getEmitsLight();
 
         if (currentBlockLight != newBlockLight) {
             // Set the current block's light.
@@ -329,7 +329,7 @@ public class SectionedChunk extends SectionedChunkSnapshot implements Chunk, Ful
         while ((toSpread = spread.poll()) != null) {
             ChunkSection cs = getOrCreateSection(toSpread.getY() / 16);
             byte adjustedLight = (byte) (cs.getBlockLight(toSpread.getX(), toSpread.getY() % 16, toSpread.getZ())
-                                - BlockTypes.forId(cs.getBlockId(toSpread.getX(), toSpread.getY() % 16, toSpread.getZ())).filtersLight());
+                                - BlockTypes.forId(cs.getBlockId(toSpread.getX(), toSpread.getY() % 16, toSpread.getZ())).getFiltersLight());
 
             if(adjustedLight >= 1){
                 computeSpreadBlockLight(toSpread.sub(1, 0, 0), adjustedLight, spread, visitedSpread);

@@ -33,6 +33,7 @@ import com.voxelwind.server.game.level.manager.LevelEntityManager;
 import com.voxelwind.server.game.level.manager.LevelPacketManager;
 import com.voxelwind.server.game.serializer.MetadataSerializer;
 import com.voxelwind.server.network.mcpe.packets.McpeBlockEntityData;
+import com.voxelwind.server.network.mcpe.packets.McpeLevelEvent;
 import com.voxelwind.server.network.mcpe.packets.McpeUpdateBlock;
 import com.voxelwind.server.network.session.PlayerSession;
 import lombok.extern.log4j.Log4j2;
@@ -237,5 +238,14 @@ public class VoxelwindLevel implements Level {
             packet2.setBlockEntityData(blockEntityTag);
             packetManager.queuePacketForPlayers(packet2);
         }
+    }
+
+    public void broadcastLevelEvent(int eventId, Vector3f pos, int data) {
+        McpeLevelEvent packet = new McpeLevelEvent();
+        packet.setEventId(eventId);
+        packet.setPosition(pos);
+        packet.setData(data);
+
+        packetManager.queuePacketForPlayers(packet);
     }
 }

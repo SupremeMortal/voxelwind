@@ -12,6 +12,8 @@ public interface ItemType {
 
     boolean isBlock();
 
+    boolean isTool();
+
     Class<? extends Metadata> getMetadataClass();
 
     int getMaximumStackSize();
