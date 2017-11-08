@@ -47,22 +47,20 @@ import com.voxelwind.server.game.inventories.*;
 import com.voxelwind.server.game.inventories.transaction.*;
 import com.voxelwind.server.game.inventories.transaction.record.TransactionRecord;
 import com.voxelwind.server.game.inventories.transaction.record.WorldInteractionTransactionRecord;
-import com.voxelwind.server.game.item.VoxelwindItemStack;
 import com.voxelwind.server.game.level.VoxelwindLevel;
-import com.voxelwind.server.game.level.block.BasicBlockState;
-import com.voxelwind.server.game.level.block.BlockBehavior;
-import com.voxelwind.server.game.level.block.BlockBehaviors;
+import com.voxelwind.server.game.level.block.*;
 import com.voxelwind.server.game.level.block.behaviors.BehaviorUtils;
 import com.voxelwind.server.game.level.chunk.util.FullChunkPacketCreator;
 import com.voxelwind.server.game.level.util.BoundingBox;
 import com.voxelwind.server.game.level.util.Gamerule;
 import com.voxelwind.server.game.level.util.PlayerAttribute;
 import com.voxelwind.server.game.permissions.PermissionLevel;
+import com.voxelwind.server.game.serializer.MetadataSerializer;
 import com.voxelwind.server.network.NetworkPackage;
 import com.voxelwind.server.network.mcpe.packets.*;
 import com.voxelwind.server.network.mcpe.util.ActionPermissionFlag;
+import com.voxelwind.server.network.mcpe.util.LevelEventConstants;
 import com.voxelwind.server.network.raknet.handler.NetworkPacketHandler;
-import com.voxelwind.server.network.session.auth.PlayerRecord;
 import gnu.trove.set.TLongSet;
 import gnu.trove.set.hash.TLongHashSet;
 import lombok.extern.log4j.Log4j2;
@@ -429,9 +427,9 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
 
     @Nonnull
     @Override
-    public OptionalLong getXuid() {
-        return session.getAuthenticationProfile().getXuid() == null ? OptionalLong.empty() :
-                OptionalLong.of(session.getAuthenticationProfile().getXuid());
+    public Optional<String> getXuid() {
+        return session.getAuthenticationProfile().getXuid() == null || session.getAuthenticationProfile().getXuid().isEmpty() ?
+                Optional.empty() : Optional.of(session.getAuthenticationProfile().getXuid());
     }
 
     @Nonnull
@@ -484,7 +482,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                 break;
         }
         text.setMessage(message);
-        text.setXuid(Long.toString(session.getAuthenticationProfile().getXuid()));
+        text.setXuid(getXuid().isPresent() ? getXuid().get() : "");
         session.addToSendQueue(text);
     }
 
@@ -788,7 +786,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         }
 
         // Ask the block being checked.
-        ItemStack serverInHand = actuallyInHand.orElse(new VoxelwindItemStack(BlockTypes.AIR, 1, null));
+        ItemStack serverInHand = actuallyInHand.orElse(BlockUtil.AIR);
         BlockFace face = BlockFace.values()[itemUseTransaction.getFace()];
         BlockBehavior againstBehavior = BlockBehaviors.getBlockBehavior(usedAgainst.get().getBlockState().getBlockType());
         switch (againstBehavior.handleItemInteraction(getServer(), PlayerSession.this, itemUseTransaction.getPosition(), face, serverInHand)) {
@@ -900,13 +898,58 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         public void handle(McpePlayerAction packet) {
             switch (packet.getAction()) {
                 case START_BREAK:
-                    // Fire interact
+                    if (ensureAndGet(PlayerData.class).getGameMode() == GameMode.SURVIVAL) {
+                        Optional<Block> targetOptional = getLevel().getBlockIfChunkLoaded(packet.getPosition());
+                        if (!targetOptional.isPresent()) {
+                            // Chunk not loaded, danger ahead!
+                            log.error("{} tried to break block at unloaded chunk ({}, {})", getName(), packet.getPosition().getX() >> 4, packet.getPosition().getZ() >> 4);
+                            return;
+                        }
+                        Block target = targetOptional.get();
+                        if (!target.getBlockState().getBlockType().isDiggable()) {
+                            return;
+                        }
+
+                        BlockType targetType = target.getBlockState().getBlockType();
+                        BlockBehavior targetBehavior = BlockBehaviors.getBlockBehavior(targetType);
+                        float toolTipFactor = targetBehavior.getDrops(getServer(), PlayerSession.this, target, playerInventory.getStackInHand().orElse(BlockUtil.AIR)).size() == 0 ? 5f : 1.5f;
+                        double breakTime = Math.ceil(targetType.hardness() * toolTipFactor * 20);
+                        McpeLevelEvent event = new McpeLevelEvent();
+                        event.setEventId(LevelEventConstants.EVENT_BLOCK_START_BREAK);
+                        event.setData((int) (65535 / breakTime));
+                        event.setPosition(packet.getPosition().toFloat());
+                        getLevel().getPacketManager().queuePacketForViewers(PlayerSession.this, event);
+                        session.addToSendQueue(event);
+                    }
+                    break;
+                case BREAKING:
+                    Optional<Block> targetOptional = getLevel().getBlockIfChunkLoaded(packet.getPosition());
+                    if (!targetOptional.isPresent()) {
+                        // Chunk not loaded, danger ahead!
+                        log.error("{} tried to break block at unloaded chunk ({}, {})", getName(), packet.getPosition().getX() >> 4, packet.getPosition().getZ() >> 4);
+                        return;
+                    }
+                    VoxelwindBlock target = (VoxelwindBlock) targetOptional.get();
+                    if (!target.getBlockState().getBlockType().isDiggable()) {
+                        return;
+                    }
+                    int damage = MetadataSerializer.serializeMetadata(target.getBlockState());
+                    int data = target.getBlockState().getBlockType().getId() | (damage << 8) | packet.getFace() << 16;
+                    McpeLevelEvent breaking = new McpeLevelEvent();
+                    breaking.setPosition(packet.getPosition().toFloat());
+                    breaking.setEventId(LevelEventConstants.EVENT_PARTICLE_PUNCH_BLOCK);
+                    breaking.setData(data);
+                    getLevel().getPacketManager().queuePacketForViewers(PlayerSession.this, breaking);
+                    session.addToSendQueue(breaking);
                     break;
                 case ABORT_BREAK:
-                    // No-op
-                    break;
+                    // Fall through
                 case STOP_BREAK:
-                    // No-op
+                    McpeLevelEvent stopBreak = new McpeLevelEvent();
+                    stopBreak.setEventId(LevelEventConstants.EVENT_BLOCK_STOP_BREAK);
+                    stopBreak.setPosition(packet.getPosition().toFloat());
+                    getLevel().getPacketManager().queuePacketForViewers(PlayerSession.this, stopBreak);
+                    session.addToSendQueue(stopBreak);
                     break;
                 case DROP_ITEM:
                     // Drop item, shoot bow, or dump bucket?
@@ -952,9 +995,6 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                     sneaking = false;
                     sendAttributes();
                     break;
-                case BREAKING:
-                    // In process of breaking block.
-                    break;
             }
             broadcastSetEntityData();
         }
@@ -990,9 +1030,15 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
 
             packet.setSource(getName());
             packet.setNeedsTranslation(false); // Deal with this later.
-            packet.setXuid(Long.toString(session.getAuthenticationProfile().getXuid()));
+            packet.setXuid("");
             // By default, queue this packet for all players in the world.
             getLevel().getPacketManager().queuePacketForPlayers(packet);
+
+            McpeText textPacket = new McpeText();
+            textPacket.setSource(getName());
+            if (getXuid().isPresent()) textPacket.setXuid(getXuid().get());
+            textPacket.setNeedsTranslation(false);
+            textPacket.setMessage(packet.getMessage());
         }
 
         @Override
@@ -1013,7 +1059,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                 return;
             }
 
-            if (flying && packet.isOnGround()) {
+            if (packet.isOnGround() && flying) {
                 PlayerData data = ensureAndGet(PlayerData.class);
                 data.setFlying(false);
             }
@@ -1285,15 +1331,15 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                 McpePlayerList list = new McpePlayerList();
                 list.setType((byte) 0);
                 for (Player player : toAdd) {
-                    PlayerData data = ensureAndGet(PlayerData.class);
-                    PlayerRecord record = new PlayerRecord(player.getUniqueId());
-                    record.setEntityId(player.getEntityId());
-                    record.setSkin(data.getSkin());
-                    record.setName(player.getName());
-                    record.setXuid(session.getAuthenticationProfile().getXuid());
-                    list.getRecords().add(record);
+                    PlayerData data = player.ensureAndGet(PlayerData.class);
+                    McpePlayerList.Entry entry = new McpePlayerList.Entry(player.getUniqueId());
+                    entry.setEntityId(player.getEntityId());
+                    entry.setSkin(data.getSkin());
+                    entry.setName(player.getName());
+                    entry.setXuid(player.getXuid().isPresent() ? player.getXuid().get() : "");
+                    list.getEntries().add(entry);
                 }
-                session.addToSendQueue(list);
+                session.sendImmediatePackage(list);
             }
 
             if (!toRemove.isEmpty()) {
@@ -1302,9 +1348,9 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                 McpePlayerList list = new McpePlayerList();
                 list.setType((byte) 1);
                 for (UUID uuid : toRemove) {
-                    list.getRecords().add(new PlayerRecord(uuid));
+                    list.getEntries().add(new McpePlayerList.Entry(uuid));
                 }
-                session.addToSendQueue(list);
+                session.sendImmediatePackage(list);
             }
         }
     }

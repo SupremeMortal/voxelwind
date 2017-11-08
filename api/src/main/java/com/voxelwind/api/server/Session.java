@@ -3,7 +3,6 @@ package com.voxelwind.api.server;
 import javax.annotation.Nonnull;
 import java.net.InetSocketAddress;
 import java.util.Optional;
-import java.util.OptionalLong;
 import java.util.UUID;
 
 /**
@@ -22,5 +21,5 @@ public interface Session {
     boolean isXboxAuthenticated();
 
     @Nonnull
-    OptionalLong getXuid();
+    Optional<String> getXuid();
 }

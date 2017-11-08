@@ -12,5 +12,5 @@ public class UserAuthenticationProfile {
     @JsonProperty
     private UUID identity;
     @JsonProperty(value = "XUID")
-    private Long xuid;
+    private String xuid;
 }

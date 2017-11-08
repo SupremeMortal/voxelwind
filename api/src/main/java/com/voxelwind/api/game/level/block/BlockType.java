@@ -16,4 +16,6 @@ public interface BlockType extends ItemType {
 
     int emitsLight();
     int filtersLight();
+
+    float hardness();
 }
