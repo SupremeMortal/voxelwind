@@ -18,6 +18,7 @@ import com.voxelwind.api.server.event.server.ServerInitializeEvent;
 import com.voxelwind.api.server.event.server.ServerStartEvent;
 import com.voxelwind.server.command.VoxelwindCommandManager;
 import com.voxelwind.server.command.VoxelwindConsoleCommandExecutorSource;
+import com.voxelwind.server.command.builtin.GamemodeCommand;
 import com.voxelwind.server.command.builtin.GiveCommand;
 import com.voxelwind.server.command.builtin.TestCommand;
 import com.voxelwind.server.command.builtin.VersionCommand;
@@ -41,6 +42,7 @@ import com.voxelwind.server.plugin.VoxelwindPluginManager;
 import io.netty.channel.epoll.Epoll;
 import io.netty.util.ResourceLeakDetector;
 import lombok.extern.log4j.Log4j2;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -103,7 +105,8 @@ public class VoxelwindServer implements Server {
 
         // Basic initialization.
         commandManager.register("version", new VersionCommand(this));
-        commandManager.register("vwgive", new GiveCommand());
+        commandManager.register("give", new GiveCommand());
+        commandManager.register("gamemode", new GamemodeCommand());
         commandManager.register("vwtest", new TestCommand());
 
         // Load configuration.
