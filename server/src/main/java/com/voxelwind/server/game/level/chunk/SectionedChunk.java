@@ -191,7 +191,7 @@ public class SectionedChunk extends SectionedChunkSnapshot implements Chunk, Ful
     public McpeWrapper toFullChunkData() {
         if (precompressed != null) {
             McpeWrapper wrapper = new McpeWrapper();
-            wrapper.setPayload(Unpooled.directBuffer().writeBytes(precompressed));
+            wrapper.setPayload(Unpooled.directBuffer(precompressed.length).writeBytes(precompressed));
             return wrapper;
         }
 
