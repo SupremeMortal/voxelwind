@@ -9,6 +9,9 @@ import com.voxelwind.server.network.session.McpeSession;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
+import static com.voxelwind.server.network.raknet.RakNetConstants.MAXIMUM_MTU_SIZE;
+import static com.voxelwind.server.network.raknet.RakNetConstants.RAKNET_PROTOCOL_VERSION;
+
 public class RakNetDirectPacketHandler extends SimpleChannelInboundHandler<DirectAddressedRakNetPacket> {
     private static final long SERVER_ID = 68382;
     private final VoxelwindServer server;
@@ -35,6 +38,12 @@ public class RakNetDirectPacketHandler extends SimpleChannelInboundHandler<Direc
                 }
                 if (packet.content() instanceof OpenConnectionRequest1Packet) {
                     OpenConnectionRequest1Packet request = (OpenConnectionRequest1Packet) packet.content();
+                    if (request.getProtocolVersion() != RAKNET_PROTOCOL_VERSION) {
+                        // Incorrect protocol version.
+                        IncompatibleProtocolVersion badVersion = new IncompatibleProtocolVersion();
+                        badVersion.setServerGuid(SERVER_ID);
+                        ctx.writeAndFlush(new DirectAddressedRakNetPacket(badVersion, packet.sender(), packet.recipient()), ctx.voidPromise());
+                    }
                     int maximum = server.getConfiguration().getMaximumPlayerLimit();
                     if (maximum > 0 && server.getSessionManager().countConnected() >= maximum) {
                         // Server is full
@@ -44,7 +53,7 @@ public class RakNetDirectPacketHandler extends SimpleChannelInboundHandler<Direc
                         return;
                     }
                     OpenConnectionResponse1Packet response = new OpenConnectionResponse1Packet();
-                    response.setMtuSize(request.getMtu());
+                    response.setMtuSize((request.getMtu() > MAXIMUM_MTU_SIZE ? MAXIMUM_MTU_SIZE : request.getMtu()));
                     response.setServerSecurity((byte) 0);
                     response.setServerGuid(SERVER_ID);
                     ctx.writeAndFlush(new DirectAddressedRakNetPacket(response, packet.sender(), packet.recipient()), ctx.voidPromise());

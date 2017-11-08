@@ -8,6 +8,9 @@ import lombok.Data;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.voxelwind.server.network.raknet.RakNetConstants.MAX_ENCAPSULATED_HEADER_SIZE;
+import static com.voxelwind.server.network.raknet.RakNetConstants.MAX_MESSAGE_HEADER_SIZE;
+
 @Data
 public class EncapsulatedRakNetPacket implements ReferenceCounted {
     private RakNetReliability reliability;
@@ -24,11 +27,11 @@ public class EncapsulatedRakNetPacket implements ReferenceCounted {
     public static List<EncapsulatedRakNetPacket> encapsulatePackage(ByteBuf buffer, RakNetSession session, boolean isOrdered) {
         // Potentially split the package.
         List<ByteBuf> bufs = new ArrayList<>();
-        int by = session.getMtu() - 32; // MTU minus 32 seems to work well
+        int by = session.getMtu() - MAX_ENCAPSULATED_HEADER_SIZE - MAX_MESSAGE_HEADER_SIZE;
         if (buffer.readableBytes() > by) {
             // Packet requires splitting
             ByteBuf from = buffer.slice();
-            int split = (int) Math.ceil(buffer.readableBytes() / by);
+            int split = ((buffer.readableBytes() - 1) / by) + 1;
             for (int i = 0; i < split; i++) {
                 bufs.add(from.readSlice(Math.min(by, from.readableBytes())));
             }
@@ -70,6 +73,10 @@ public class EncapsulatedRakNetPacket implements ReferenceCounted {
             buf.writeMediumLE(reliabilityNumber);
         }
 
+        if (reliability == RakNetReliability.UNRELIABLE_SEQUENCED || reliability == RakNetReliability.RELIABLE_SEQUENCED) {
+            buf.writeMediumLE(sequenceIndex);
+        }
+
         if (reliability == RakNetReliability.UNRELIABLE_SEQUENCED || reliability == RakNetReliability.RELIABLE_SEQUENCED ||
                 reliability == RakNetReliability.RELIABLE_ORDERED || reliability == RakNetReliability.RELIABLE_ORDERED_WITH_ACK_RECEIPT) {
             buf.writeMediumLE(orderingIndex);
@@ -95,6 +102,10 @@ public class EncapsulatedRakNetPacket implements ReferenceCounted {
                 reliability == RakNetReliability.RELIABLE_SEQUENCED || reliability == RakNetReliability.RELIABLE_WITH_ACK_RECEIPT ||
                 reliability == RakNetReliability.RELIABLE_ORDERED_WITH_ACK_RECEIPT) {
             reliabilityNumber = buf.readUnsignedMediumLE();
+        }
+
+        if (reliability == RakNetReliability.UNRELIABLE_SEQUENCED || reliability == RakNetReliability.RELIABLE_SEQUENCED) {
+            sequenceIndex = buf.readUnsignedMediumLE();
         }
 
         if (reliability == RakNetReliability.UNRELIABLE_SEQUENCED || reliability == RakNetReliability.RELIABLE_SEQUENCED ||

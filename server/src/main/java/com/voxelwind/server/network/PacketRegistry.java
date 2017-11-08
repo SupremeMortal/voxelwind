@@ -31,6 +31,7 @@ public class PacketRegistry {
         RAKNET_PACKETS[0x14] = NoFreeIncomingConnectionsPacket.class;
         RAKNET_PACKETS[0x15] = DisconnectNotificationPacket.class;
         RAKNET_PACKETS[0x17] = ConnectionBannedPacket.class;
+        RAKNET_PACKETS[0x19] = IncompatibleProtocolVersion.class;
         RAKNET_PACKETS[0x1a] = IpRecentlyConnectedPacket.class;
         RAKNET_PACKETS[0x1c] = UnconnectedPongPacket.class;
         RAKNET_PACKETS[0xa0] = NakPacket.class;
