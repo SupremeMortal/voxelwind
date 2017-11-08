@@ -35,4 +35,9 @@ public class McpeLogin implements NetworkPackage {
         McpeUtil.writeLELengthAsciiString(buffer, chainData);
         McpeUtil.writeLELengthAsciiString(buffer, skinData);
     }
+
+    @Override
+    public String toString() {
+        return "McpeLogin(protocolVersion=" + protocolVersion + ")";
+    }
 }
