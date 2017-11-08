@@ -1,6 +1,6 @@
 # Voxelwind
 
-[![Join the chat at https://gitter.im/minecrafter/voxelwind](https://badges.gitter.im/minecrafter/voxelwind.svg)](https://gitter.im/minecrafter/voxelwind?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Join the chat at https://gitter.im/minecrafter/voxelwind](https://badges.gitter.im/minecrafter/voxelwind.svg)](https://gitter.im/minecrafter/voxelwind?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Build Status](https://ci.potestas.xyz/job/Voxelwind/badge/icon)](https://ci.potestas.xyz/job/Voxelwind/) [![Build Tests](https://img.shields.io/jenkins/t/https/ci.potestas.xyz/job/Voxelwind.svg)]() 
 
 **Current version**: version 0.0.1 (_Layer of Fog_)
 
@@ -17,7 +17,7 @@ Voxelwind upstream so that the larger community can benefit from them.
 * [Gitter chat room](https://gitter.im/minecrafter/voxelwind)
 * [Wiki](//github.com/SupremeMortal/voxelwind/wiki)
 * [Chat on the Forums](https://forums.voxelwind.com/)
-* [Latest Jenkins builds](https://ci.potestas.xyz/job/Voxelwind-1.2/)
+* [Latest Jenkins builds](https://ci.potestas.xyz/job/Voxelwind/)
 * [Follow @Voxelwind on Twitter](https://twitter.com/Voxelwind)
 
 ## Special Thanks
