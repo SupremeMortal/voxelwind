@@ -122,7 +122,7 @@ public class PacketRegistry {
         //MCPE_PACKETS[0x52] = McpeResourcePackDataInfo.class;
         //MCPE_PACKETS[0x53] = McpeResourcePackChunkData.class;
         //MCPE_PACKETS[0x54] = McpeResourcePackChunkRequest.class;
-        //MCPE_PACKETS[0x55] = McpeTransfer.class;
+        MCPE_PACKETS[0x55] = McpeTransfer.class;
         //MCPE_PACKETS[0x56] = McpePlaySound.class;
         //MCPE_PACKETS[0x57] = MspeStopSound.class;
         //MCPE_PACKETS[0x58] = McpeSetTitle.class;

@@ -557,6 +557,13 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         openInventoryId = -1;
     }
 
+    @Override
+    public void transfer(String address, short port) {
+        McpeTransfer transfer = new McpeTransfer();
+        transfer.setAddress(address);
+        transfer.setPort(port);
+    }
+
     public byte getNextWindowId() {
         return (byte) (1 + (windowIdGenerator.incrementAndGet() % 2));
     }
@@ -620,6 +627,8 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                         item.ensureAndGet(PickupDelay.class).setDelayPickupTicks(5);
                     }
                     chunkOptional.get().setBlock(inChunkX, position.getY(), inChunkZ, new BasicBlockState(BlockTypes.AIR, null, null));
+                        int data = block.getBlockState().getBlockType().getId() | MetadataSerializer.serializeMetadata(block.getBlockState()) << 8;
+                        broadcastLevelEvent(LevelEventConstants.EVENT_PARTICLE_DESTROY, data, position.toFloat());
                         break;
                 }
             } else {
@@ -662,6 +671,15 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         dataPacket.setRuntimeEntityId(getEntityId());
         dataPacket.getMetadata().putAll(getMetadata());
         session.addToSendQueue(dataPacket);
+    }
+
+    private void broadcastLevelEvent(int eventId, int data, Vector3f position) {
+        McpeLevelEvent event = new McpeLevelEvent();
+        event.setEventId(eventId);
+        event.setData(data);
+        event.setPosition(position);
+        getLevel().getPacketManager().queuePacketForViewers(this, event);
+        session.addToSendQueue(event);
     }
 
     public void sendPlayerInventory() {
@@ -914,12 +932,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                         BlockBehavior targetBehavior = BlockBehaviors.getBlockBehavior(targetType);
                         float toolTipFactor = targetBehavior.getDrops(getServer(), PlayerSession.this, target, playerInventory.getStackInHand().orElse(BlockUtil.AIR)).size() == 0 ? 5f : 1.5f;
                         double breakTime = Math.ceil(targetType.hardness() * toolTipFactor * 20);
-                        McpeLevelEvent event = new McpeLevelEvent();
-                        event.setEventId(LevelEventConstants.EVENT_BLOCK_START_BREAK);
-                        event.setData((int) (65535 / breakTime));
-                        event.setPosition(packet.getPosition().toFloat());
-                        getLevel().getPacketManager().queuePacketForViewers(PlayerSession.this, event);
-                        session.addToSendQueue(event);
+                        broadcastLevelEvent(LevelEventConstants.EVENT_BLOCK_START_BREAK, (int) (65535 / breakTime), packet.getPosition().toFloat());
                     }
                     break;
                 case BREAKING:
@@ -935,21 +948,12 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
                     }
                     int damage = MetadataSerializer.serializeMetadata(target.getBlockState());
                     int data = target.getBlockState().getBlockType().getId() | (damage << 8) | packet.getFace() << 16;
-                    McpeLevelEvent breaking = new McpeLevelEvent();
-                    breaking.setPosition(packet.getPosition().toFloat());
-                    breaking.setEventId(LevelEventConstants.EVENT_PARTICLE_PUNCH_BLOCK);
-                    breaking.setData(data);
-                    getLevel().getPacketManager().queuePacketForViewers(PlayerSession.this, breaking);
-                    session.addToSendQueue(breaking);
+                    broadcastLevelEvent(LevelEventConstants.EVENT_PARTICLE_PUNCH_BLOCK, data, packet.getPosition().toFloat());
                     break;
                 case ABORT_BREAK:
                     // Fall through
                 case STOP_BREAK:
-                    McpeLevelEvent stopBreak = new McpeLevelEvent();
-                    stopBreak.setEventId(LevelEventConstants.EVENT_BLOCK_STOP_BREAK);
-                    stopBreak.setPosition(packet.getPosition().toFloat());
-                    getLevel().getPacketManager().queuePacketForViewers(PlayerSession.this, stopBreak);
-                    session.addToSendQueue(stopBreak);
+                    broadcastLevelEvent(LevelEventConstants.EVENT_BLOCK_STOP_BREAK, 0, packet.getPosition().toFloat());
                     break;
                 case DROP_ITEM:
                     // Drop item, shoot bow, or dump bucket?

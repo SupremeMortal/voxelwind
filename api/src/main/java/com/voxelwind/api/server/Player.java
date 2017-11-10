@@ -30,4 +30,12 @@ public interface Player extends Entity, CommandExecutorSource, MessageRecipient,
     void openInventory(Inventory inventory);
 
     void closeInventory();
+
+    /**
+     * Transfers the player to an external server with the Transfer Packet.
+     *
+     * @param address hostname of server.
+     * @param port    port of server.
+     */
+    void transfer(String address, short port);
 }

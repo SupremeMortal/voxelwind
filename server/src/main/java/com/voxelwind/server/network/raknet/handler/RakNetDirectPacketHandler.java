@@ -1,5 +1,8 @@
 package com.voxelwind.server.network.raknet.handler;
 
+import com.voxelwind.api.server.event.network.PingEvent;
+import com.voxelwind.api.server.event.player.PlayerPreLoginEvent;
+import com.voxelwind.api.server.player.GameMode;
 import com.voxelwind.server.VoxelwindServer;
 import com.voxelwind.server.network.raknet.RakNetSession;
 import com.voxelwind.server.network.raknet.enveloped.DirectAddressedRakNetPacket;
@@ -32,17 +35,27 @@ public class RakNetDirectPacketHandler extends SimpleChannelInboundHandler<Direc
                     UnconnectedPongPacket response = new UnconnectedPongPacket();
                     response.setPingId(request.getPingId());
                     response.setServerId(SERVER_ID);
-                    response.setAdvertise("MCPE;Voxelwind server;137;1.2;" + server.getSessionManager().countConnected() + ";" + server.getConfiguration().getMaximumPlayerLimit() + ";" + "Voxelwind server".hashCode() + packet.sender().getHostString() + packet.sender().getPort() + ";High performance Bedrock Edition Server;" + "Survival");
+                    PingEvent event = new PingEvent(server.getSessionManager().countConnected(), "Voxelwind server", "High performance Bedrock Edition Server", packet.sender(), GameMode.SURVIVAL);
+                    server.getEventManager().fire(event);
+                    response.setAdvertise("MCPE;" + event.getMotd() + ";137;1.2;" + event.getPlayerCount() + ";" + server.getConfiguration().getMaximumPlayerLimit() + ";" + event.getMotd().hashCode() + packet.sender().getHostString() + packet.sender().getPort() + ";" + event.getMotd2() + ";" + event.getGameMode().name());
                     ctx.writeAndFlush(new DirectAddressedRakNetPacket(response, packet.sender(), packet.recipient()), ctx.voidPromise());
                     return;
                 }
                 if (packet.content() instanceof OpenConnectionRequest1Packet) {
+                    PlayerPreLoginEvent event = new PlayerPreLoginEvent(packet.sender());
+                    server.getEventManager().fire(event);
+                    if (event.isCancelled()) {
+                        ConnectionBannedPacket bannedPacket = new ConnectionBannedPacket();
+                        bannedPacket.setServerGuid(SERVER_ID);
+                        return;
+                    }
                     OpenConnectionRequest1Packet request = (OpenConnectionRequest1Packet) packet.content();
                     if (request.getProtocolVersion() != RAKNET_PROTOCOL_VERSION) {
                         // Incorrect protocol version.
                         IncompatibleProtocolVersion badVersion = new IncompatibleProtocolVersion();
                         badVersion.setServerGuid(SERVER_ID);
                         ctx.writeAndFlush(new DirectAddressedRakNetPacket(badVersion, packet.sender(), packet.recipient()), ctx.voidPromise());
+                        return;
                     }
                     int maximum = server.getConfiguration().getMaximumPlayerLimit();
                     if (maximum > 0 && server.getSessionManager().countConnected() >= maximum) {
