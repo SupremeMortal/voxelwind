@@ -29,6 +29,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
 
+
 public class JavaPluginLoader implements PluginLoader {
     private final Server server;
 
@@ -100,7 +101,7 @@ public class JavaPluginLoader implements PluginLoader {
         injector.register(Server.class, server);
         injector.register(PluginDescription.class, description);
         injector.register(Logger.class, LoggerFactory.getLogger(description.getId()));
-        injector.register(Path.class, path.resolve("..").resolve(description.getId()));
+        injector.register(Path.class, path.getParent().resolve(description.getId()).toAbsolutePath());
         return injector.newInstance(clz);
     }
 
