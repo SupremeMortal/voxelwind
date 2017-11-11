@@ -562,6 +562,7 @@ public class PlayerSession extends LivingEntity implements Player, InventoryObse
         McpeTransfer transfer = new McpeTransfer();
         transfer.setAddress(address);
         transfer.setPort(port);
+        session.sendImmediatePackage(transfer);
     }
 
     public byte getNextWindowId() {
