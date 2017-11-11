@@ -192,13 +192,17 @@ public class InitialNetworkPacketHandler implements NetworkPacketHandler {
 
         try {
             boolean trustedChain = validateChainData(certChainData);
-            if (!trustedChain) {
+            if (!trustedChain && session.getServer().getConfiguration().getXboxAuthentication().isForceAuthentication()) {
                 session.disconnect("This server requires that you sign in with Xbox Live.");
                 return;
             }
 
             JwtPayload payload = VoxelwindServer.MAPPER.convertValue(
                     getPayload(certChainData.get(certChainData.size() - 1).asText()), JwtPayload.class);
+
+            if (!trustedChain && payload.getExtraData().getXuid() != null) {
+                payload.getExtraData().setXuid(null);
+            }
 
             session.setAuthenticationProfile(payload.getExtraData());
 

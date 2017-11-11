@@ -20,6 +20,10 @@ import java.util.Random;
 @ToString
 public class VoxelwindConfiguration {
     /**
+     * Configuration for Xbox authentication.
+     */
+    private XboxAuthenticationConfiguration xboxAuthentication;
+    /**
      * Configuration for MCPE network listener.
      */
     private McpeListenerConfiguration mcpeListener;
@@ -46,6 +50,15 @@ public class VoxelwindConfiguration {
     private int maximumViewDistance;
     private Map<String, LevelConfiguration> levels;
 
+    @Getter
+    @ToString
+    public static class XboxAuthenticationConfiguration {
+        /**
+         * Whether or not Xbox authentication is the only authentication method permitted. If a player attempts to connect
+         * without using Xbox authentication, they will be disconnected when trying to log in.
+         */
+        private boolean forceAuthentication;
+    }
     @Getter
     @ToString
     public static class McpeListenerConfiguration {
@@ -142,6 +155,10 @@ public class VoxelwindConfiguration {
         private boolean useSoReuseport;
     }
 
+    public XboxAuthenticationConfiguration getXboxAuthentication() {
+        return xboxAuthentication;
+    }
+
     public boolean addMissingFields() {
         boolean needToSave = false;
 
@@ -167,6 +184,12 @@ public class VoxelwindConfiguration {
             chunkGC.releaseAfterLastAccess = 30;
             chunkGC.releaseAfterLoadSeconds = 120;
             chunkGC.spawnRadiusToKeep = 6;
+            needToSave = true;
+        }
+
+        if (xboxAuthentication == null) {
+            xboxAuthentication = new XboxAuthenticationConfiguration();
+            xboxAuthentication.forceAuthentication = false;
             needToSave = true;
         }
 
