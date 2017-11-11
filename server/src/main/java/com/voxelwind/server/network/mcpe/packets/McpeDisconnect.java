@@ -2,14 +2,12 @@ package com.voxelwind.server.network.mcpe.packets;
 
 import com.voxelwind.server.network.NetworkPackage;
 import com.voxelwind.server.network.mcpe.McpeUtil;
-import com.voxelwind.server.network.mcpe.annotations.ForceClearText;
 import io.netty.buffer.ByteBuf;
 import lombok.Data;
 
 @Data
-@ForceClearText
 public class McpeDisconnect implements NetworkPackage {
-    private boolean hideDisconnectionScreen;
+    private boolean hideDisconnectionScreen = false;
     private String message;
 
     @Override
