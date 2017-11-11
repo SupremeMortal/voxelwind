@@ -7,11 +7,13 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.voxelwind.api.game.item.ItemStackBuilder;
 import com.voxelwind.api.game.level.Level;
 import com.voxelwind.api.game.level.block.BlockStateBuilder;
+import com.voxelwind.api.game.util.TextFormat;
 import com.voxelwind.api.plugin.PluginManager;
 import com.voxelwind.api.server.LevelCreator;
 import com.voxelwind.api.server.Player;
 import com.voxelwind.api.server.Server;
 import com.voxelwind.api.server.command.CommandManager;
+import com.voxelwind.api.server.command.CommandNotFoundException;
 import com.voxelwind.api.server.command.sources.ConsoleCommandExecutorSource;
 import com.voxelwind.api.server.event.EventManager;
 import com.voxelwind.api.server.event.server.ServerInitializeEvent;
@@ -22,6 +24,8 @@ import com.voxelwind.server.command.builtin.GamemodeCommand;
 import com.voxelwind.server.command.builtin.GiveCommand;
 import com.voxelwind.server.command.builtin.TestCommand;
 import com.voxelwind.server.command.builtin.VersionCommand;
+import com.voxelwind.server.console.VoxelwindConsoleAppender;
+import com.voxelwind.server.console.VoxelwindConsoleCompletor;
 import com.voxelwind.server.event.VoxelwindEventManager;
 import com.voxelwind.server.game.item.VoxelwindItemStackBuilder;
 import com.voxelwind.server.game.level.LevelManager;
@@ -42,6 +46,10 @@ import com.voxelwind.server.plugin.VoxelwindPluginManager;
 import io.netty.channel.epoll.Epoll;
 import io.netty.util.ResourceLeakDetector;
 import lombok.extern.log4j.Log4j2;
+import org.jline.reader.LineReader;
+import org.jline.reader.LineReaderBuilder;
+import org.jline.reader.UserInterruptException;
+import org.jline.terminal.Terminal;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -54,6 +62,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Log4j2
 public class VoxelwindServer implements Server {
@@ -70,6 +81,7 @@ public class VoxelwindServer implements Server {
     private final VoxelwindCommandManager commandManager = new VoxelwindCommandManager();
     private VoxelwindConfiguration configuration;
     private VoxelwindLevel defaultLevel;
+    private AtomicBoolean running = new AtomicBoolean(true);
 
     public static void main(String... args) throws Exception {
         // RakNet doesn't really like IPv6
@@ -100,6 +112,8 @@ public class VoxelwindServer implements Server {
     }
 
     private void boot() throws Exception {
+        Thread.currentThread().setName("Voxelwind Main Thread");
+
         // Say hello.
         log.info("{} {} is coming online...", getName(), getVersion());
 
@@ -182,9 +196,88 @@ public class VoxelwindServer implements Server {
         // Send another event.
         eventManager.fire(ServerStartEvent.INSTANCE);
 
-        // Sleep forever for now until we have a console reader.
-        while (true) {
-            Thread.sleep(1000);
+        Terminal terminal = VoxelwindConsoleAppender.getTerminal();
+
+        LineReader reader = null;
+        if (terminal != null) {
+            reader = LineReaderBuilder.builder()
+                    .appName("Voxelwind")
+                    .completer(new VoxelwindConsoleCompletor())
+                    .terminal(terminal)
+                    .build();
+            reader.setKeyMap(LineReader.VISUAL);
+            reader.unsetOpt(LineReader.Option.INSERT_TAB);
+            VoxelwindConsoleAppender.setLineReader(reader);
+        }
+
+        BlockingQueue<String> inputLines = new LinkedBlockingQueue<>();
+
+        if (reader != null) {
+            final LineReader finalReader = reader;
+            AtomicBoolean reading = new AtomicBoolean(false);
+            Thread consoleReader = new Thread(() -> {
+                String line;
+                try {
+                    while (running.get()) {
+                        // Read jLine
+                        reading.set(true);
+                        line = finalReader.readLine("> ");
+                        inputLines.offer(line);
+
+                    }
+                } catch (UserInterruptException e) {
+                    shutdown();
+                } finally {
+                    VoxelwindConsoleAppender.setLineReader(null);
+                }
+            });
+
+            consoleReader.setName("Voxelwind Console Reader");
+            consoleReader.start();
+
+            // Wait until we read
+            while (!reading.get()) {
+            }
+        }
+
+        long skipNanos = TimeUnit.SECONDS.toNanos(1) / 20;
+        float lastTickTime = Float.MIN_NORMAL;
+        ReentrantLock tickLock = new ReentrantLock(true);
+        Condition tickCondition = tickLock.newCondition();
+
+        while (running.get()) {
+            tickLock.lock();
+            try {
+                long start = System.nanoTime();
+
+                while (inputLines.size() > 0) {
+                    String line = inputLines.take();
+                    try {
+                        commandManager.executeCommand(consoleCommandExecutorSource, line);
+                    } catch (CommandNotFoundException e) {
+                        consoleCommandExecutorSource.sendMessage(TextFormat.RED + "Command not found.");
+                    }
+                }
+
+                if (!running.get()) {
+                    break;
+                }
+
+                long diff = System.nanoTime() - start;
+                if (diff < skipNanos) {
+                    tickCondition.await(skipNanos - diff, TimeUnit.NANOSECONDS);
+                    lastTickTime = (float) skipNanos / 1000000000.0F;
+                } else {
+                    lastTickTime = (float) diff / 1000000000.0F;
+                    log.warn("Running behind: " + (1 / lastTickTime) + " / " + (1 / (skipNanos / 1000000000.0F)) + " tps");
+                }
+            } catch (Exception e) {
+                // Nothing
+            } finally {
+                tickLock.unlock();
+            }
+            // Close Console.
+            VoxelwindConsoleAppender.close();
         }
     }
 
@@ -362,6 +455,11 @@ public class VoxelwindServer implements Server {
     @Override
     public boolean unloadLevel(String name) {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void shutdown() {
+        running.set(false);
     }
 
     public VoxelwindConfiguration getConfiguration() {

@@ -68,4 +68,9 @@ public interface Server {
     CompletableFuture<Level> createLevel(LevelCreator creator);
 
     boolean unloadLevel(String name);
+
+    /**
+     * Shuts down the server by closing main thread loop.
+     */
+    void shutdown();
 }
