@@ -8,7 +8,6 @@ import com.voxelwind.server.network.raknet.enveloped.DirectAddressedRakNetPacket
 import com.voxelwind.server.network.raknet.packets.AckPacket;
 import com.voxelwind.server.network.raknet.packets.NakPacket;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.MessageToMessageCodec;
@@ -27,7 +26,6 @@ public class SimpleRakNetPacketCodec extends MessageToMessageCodec<DatagramPacke
         // Certain RakNet packets do not require special encapsulation. This encoder tries to handle them.
         try {
             ByteBuf buf = PacketRegistry.tryEncode(pkg.content());
-            log.debug("\n {} \n {}", pkg.recipient(), ByteBufUtil.prettyHexDump(buf));
             list.add(new DatagramPacket(buf, pkg.recipient(), pkg.sender()));
         } finally {
             pkg.release();
@@ -43,8 +41,6 @@ public class SimpleRakNetPacketCodec extends MessageToMessageCodec<DatagramPacke
             return;
         }
         buf.markReaderIndex();
-
-        log.debug("\n {} \n {}", packet.sender(), ByteBufUtil.prettyHexDump(buf));
 
         if (buf.readableBytes() > 2) {
             byte[] prefix = new byte[2];

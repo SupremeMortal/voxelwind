@@ -45,7 +45,6 @@ public class QueryHandler {
         }
         if (packet.content() instanceof QueryStatistics) {
             QueryStatistics statistics = (QueryStatistics) packet.content();
-            log.debug("\nReceived Token: {}\nActual Token:   {}", statistics.getToken(), getTokenInt(packet.sender()));
             if (!(statistics.getToken() == getTokenInt(packet.sender()))) {
                 return;
             }
