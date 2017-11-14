@@ -27,6 +27,13 @@ public interface Server {
      * Returns the version of the server software.
      * @return the version of the server
      */
+    String getVoxelwindVersion();
+
+    /**
+     * Returns the version of Minecraft compatible with the server software.
+     *
+     * @return the version of Minecraft.
+     */
     String getVersion();
 
     /**
@@ -70,7 +77,14 @@ public interface Server {
     boolean unloadLevel(String name);
 
     /**
-     * Shuts down the server by closing main thread loop.
+     * Shuts down the server.
      */
     void shutdown();
+
+    /**
+     * Shuts down the server we disconnect reason
+     *
+     * @param reason shutdown reason.
+     */
+    void shutdown(String reason);
 }

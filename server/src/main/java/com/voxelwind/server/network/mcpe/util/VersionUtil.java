@@ -7,10 +7,15 @@ import java.util.Arrays;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class VersionUtil {
+    private static final int BROADCAST_PROTOCOL_VERSION = 141;
     private static final int[] COMPATIBLE_PROTOCOL_VERSIONS = new int[]{137, 140, 141};
 
     public static int[] getCompatibleProtocolVersions() {
         return COMPATIBLE_PROTOCOL_VERSIONS.clone();
+    }
+
+    public static int getBroadcastProtocolVersion() {
+        return BROADCAST_PROTOCOL_VERSION;
     }
 
     public static boolean isCompatible(int protocolVersion) {

@@ -20,6 +20,10 @@ import java.util.Random;
 @ToString
 public class VoxelwindConfiguration {
     /**
+     * Configuration for GS4 Status Listener
+     */
+    private QueryListenerConfiguration queryListener;
+    /**
      * Configuration for Xbox authentication.
      */
     private XboxAuthenticationConfiguration xboxAuthentication;
@@ -49,6 +53,16 @@ public class VoxelwindConfiguration {
      */
     private int maximumViewDistance;
     private Map<String, LevelConfiguration> levels;
+
+    @Getter
+    @ToString
+    public static class QueryListenerConfiguration {
+        /**
+         * Whether or not ro enable the GS4 Status Listener. If disabled, server lists will be
+         * unable to query the server for a status check.
+         */
+        private boolean enabled;
+    }
 
     @Getter
     @ToString
@@ -184,6 +198,12 @@ public class VoxelwindConfiguration {
             chunkGC.releaseAfterLastAccess = 30;
             chunkGC.releaseAfterLoadSeconds = 120;
             chunkGC.spawnRadiusToKeep = 6;
+            needToSave = true;
+        }
+
+        if (queryListener == null) {
+            queryListener = new QueryListenerConfiguration();
+            queryListener.enabled = true;
             needToSave = true;
         }
 

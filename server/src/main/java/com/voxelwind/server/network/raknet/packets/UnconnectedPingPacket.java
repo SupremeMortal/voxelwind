@@ -16,7 +16,9 @@ public class UnconnectedPingPacket implements NetworkPackage {
     public void decode(ByteBuf buffer) {
         pingId = buffer.readLong();
         RakNetUtil.verifyUnconnectedMagic(buffer);
-        serverId = buffer.readLong();
+        if (buffer.readableBytes() > 0) {
+            serverId = buffer.readLong();
+        }
     }
 
     @Override

@@ -8,20 +8,26 @@ import com.voxelwind.server.network.raknet.enveloped.DirectAddressedRakNetPacket
 import com.voxelwind.server.network.raknet.packets.AckPacket;
 import com.voxelwind.server.network.raknet.packets.NakPacket;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.MessageToMessageCodec;
+import lombok.extern.log4j.Log4j2;
 
+import java.util.Arrays;
 import java.util.List;
 
+@Log4j2
 public class SimpleRakNetPacketCodec extends MessageToMessageCodec<DatagramPacket, DirectAddressedRakNetPacket> {
     private static final int USER_ID_START = 0x80;
+    private static final byte[] QUERY_SIGNATURE = new byte[]{(byte) 0xfe, (byte) 0xfd};
 
     @Override
     protected void encode(ChannelHandlerContext ctx, DirectAddressedRakNetPacket pkg, List<Object> list) throws Exception {
         // Certain RakNet packets do not require special encapsulation. This encoder tries to handle them.
         try {
             ByteBuf buf = PacketRegistry.tryEncode(pkg.content());
+            log.debug("\n {} \n {}", pkg.recipient(), ByteBufUtil.prettyHexDump(buf));
             list.add(new DatagramPacket(buf, pkg.recipient(), pkg.sender()));
         } finally {
             pkg.release();
@@ -37,6 +43,23 @@ public class SimpleRakNetPacketCodec extends MessageToMessageCodec<DatagramPacke
             return;
         }
         buf.markReaderIndex();
+
+        log.debug("\n {} \n {}", packet.sender(), ByteBufUtil.prettyHexDump(buf));
+
+        if (buf.readableBytes() > 2) {
+            byte[] prefix = new byte[2];
+            buf.readBytes(prefix);
+            if (Arrays.equals(prefix, QUERY_SIGNATURE)) {
+                // Query packet detected.
+                NetworkPackage netPackage = PacketRegistry.tryDecode(buf.readSlice(buf.readableBytes()), PacketType.QUERY);
+                if (netPackage != null) {
+                    list.add(new DirectAddressedRakNetPacket(netPackage, packet.recipient(), packet.sender()));
+                }
+                return;
+            }
+            buf.resetReaderIndex();
+        }
+
         int id = buf.readUnsignedByte();
         if (id < USER_ID_START) { // User data
             buf.resetReaderIndex();

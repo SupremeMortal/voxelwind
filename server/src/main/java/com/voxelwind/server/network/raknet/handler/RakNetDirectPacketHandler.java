@@ -4,6 +4,8 @@ import com.voxelwind.api.server.event.network.PingEvent;
 import com.voxelwind.api.server.event.player.PlayerPreLoginEvent;
 import com.voxelwind.api.server.player.GameMode;
 import com.voxelwind.server.VoxelwindServer;
+import com.voxelwind.server.network.mcpe.util.VersionUtil;
+import com.voxelwind.server.network.query.packets.QueryPackage;
 import com.voxelwind.server.network.raknet.RakNetSession;
 import com.voxelwind.server.network.raknet.enveloped.DirectAddressedRakNetPacket;
 import com.voxelwind.server.network.raknet.packets.*;
@@ -11,6 +13,8 @@ import com.voxelwind.server.network.session.InitialNetworkPacketHandler;
 import com.voxelwind.server.network.session.McpeSession;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+
+import java.util.StringJoiner;
 
 import static com.voxelwind.server.network.raknet.RakNetConstants.MAXIMUM_MTU_SIZE;
 import static com.voxelwind.server.network.raknet.RakNetConstants.RAKNET_PROTOCOL_VERSION;
@@ -26,6 +30,10 @@ public class RakNetDirectPacketHandler extends SimpleChannelInboundHandler<Direc
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, DirectAddressedRakNetPacket packet) throws Exception {
         try {
+            if (server.getQueryHandler().isPresent() && packet.content() instanceof QueryPackage) {
+                server.getQueryHandler().get().handlePackage(ctx, packet);
+                return;
+            }
             McpeSession session = server.getSessionManager().get(packet.sender());
 
             // ** Everything we can handle without a session **
@@ -35,9 +43,24 @@ public class RakNetDirectPacketHandler extends SimpleChannelInboundHandler<Direc
                     UnconnectedPongPacket response = new UnconnectedPongPacket();
                     response.setPingId(request.getPingId());
                     response.setServerId(SERVER_ID);
-                    PingEvent event = new PingEvent(server.getSessionManager().countConnected(), "Voxelwind server", "High performance Bedrock Edition Server", packet.sender(), GameMode.SURVIVAL);
+                    PingEvent event = new PingEvent(server.getSessionManager().countConnected(),
+                            server.getConfiguration().getMaximumPlayerLimit(), "Voxelwind server",
+                            "High performance Bedrock Edition Server", packet.sender(), GameMode.SURVIVAL,
+                            VersionUtil.getBroadcastProtocolVersion(),
+                            VersionUtil.getHumanVersionName(VersionUtil.getBroadcastProtocolVersion())
+                    );
                     server.getEventManager().fire(event);
-                    response.setAdvertise("MCPE;" + event.getMotd() + ";137;1.2;" + event.getPlayerCount() + ";" + server.getConfiguration().getMaximumPlayerLimit() + ";" + event.getMotd().hashCode() + packet.sender().getHostString() + packet.sender().getPort() + ";" + event.getMotd2() + ";" + event.getGameMode().name());
+                    StringJoiner joiner = new StringJoiner(";");
+                    joiner.add("MCPE")
+                            .add(event.getMotd())
+                            .add(Integer.toString(event.getProtocolVersion()))
+                            .add(event.getMinecraftVersion())
+                            .add(Long.toString(event.getPlayerCount()))
+                            .add(Long.toString(event.getMaxPlayers()))
+                            .add(event.getMotd().hashCode() + packet.sender().getHostString() + packet.sender().getPort())
+                            .add(event.getMotd2())
+                            .add(event.getGameMode().name());
+                    response.setAdvertise(joiner.toString());
                     ctx.writeAndFlush(new DirectAddressedRakNetPacket(response, packet.sender(), packet.recipient()), ctx.voidPromise());
                     return;
                 }
@@ -47,6 +70,7 @@ public class RakNetDirectPacketHandler extends SimpleChannelInboundHandler<Direc
                     if (event.isCancelled()) {
                         ConnectionBannedPacket bannedPacket = new ConnectionBannedPacket();
                         bannedPacket.setServerGuid(SERVER_ID);
+                        ctx.writeAndFlush(new DirectAddressedRakNetPacket(bannedPacket, packet.sender(), packet.recipient()), ctx.voidPromise());
                         return;
                     }
                     OpenConnectionRequest1Packet request = (OpenConnectionRequest1Packet) packet.content();

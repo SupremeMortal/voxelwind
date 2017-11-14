@@ -2,6 +2,8 @@ package com.voxelwind.server.network;
 
 import com.voxelwind.server.network.mcpe.annotations.DisallowWrapping;
 import com.voxelwind.server.network.mcpe.packets.*;
+import com.voxelwind.server.network.query.packets.QueryHandshake;
+import com.voxelwind.server.network.query.packets.QueryStatistics;
 import com.voxelwind.server.network.raknet.packets.*;
 import gnu.trove.TCollections;
 import gnu.trove.map.TObjectIntMap;
@@ -15,6 +17,7 @@ import lombok.extern.log4j.Log4j2;
 public class PacketRegistry {
     private static final Class<? extends NetworkPackage>[] RAKNET_PACKETS = new Class[256];
     private static final Class<? extends NetworkPackage>[] MCPE_PACKETS = new Class[256];
+    private static final Class<? extends NetworkPackage>[] QUERY_PACKETS = new Class[10];
     private static final TObjectIntMap<Class<? extends NetworkPackage>> PACKAGE_MAPPING;
 
     static {
@@ -143,6 +146,9 @@ public class PacketRegistry {
         //MCPE_PACKETS[0x67] = McpeServerSettingsResponse.class;
         //MCPE_PACKETS[0x68] = McpeShowProfile.class;
 
+        QUERY_PACKETS[0x00] = QueryStatistics.class;
+        QUERY_PACKETS[0x09] = QueryHandshake.class;
+
         TObjectIntMap<Class<? extends NetworkPackage>> classToIdMap = new TObjectIntHashMap<>(64, 0.75f, -1);
         for (int i = 0; i < RAKNET_PACKETS.length; i++) {
             Class clazz = RAKNET_PACKETS[i];
@@ -153,6 +159,13 @@ public class PacketRegistry {
 
         for (int i = 0; i < MCPE_PACKETS.length; i++) {
             Class clazz = MCPE_PACKETS[i];
+            if (clazz != null) {
+                classToIdMap.put(clazz, i);
+            }
+        }
+
+        for (int i = 0; i < QUERY_PACKETS.length; i++) {
+            Class clazz = QUERY_PACKETS[i];
             if (clazz != null) {
                 classToIdMap.put(clazz, i);
             }
@@ -178,6 +191,9 @@ public class PacketRegistry {
                 break;
             case MCPE:
                 pkgClass = MCPE_PACKETS[id];
+                break;
+            case QUERY:
+                pkgClass = QUERY_PACKETS[id];
                 break;
             default:
                 throw new IllegalArgumentException("Invalid PacketType");

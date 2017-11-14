@@ -40,6 +40,8 @@ import com.voxelwind.server.game.level.chunk.provider.nil.NullChunkProvider;
 import com.voxelwind.server.network.listeners.McpeOverRakNetNetworkListener;
 import com.voxelwind.server.network.listeners.NetworkListener;
 import com.voxelwind.server.network.listeners.RconNetworkListener;
+import com.voxelwind.server.network.mcpe.util.VersionUtil;
+import com.voxelwind.server.network.query.handler.QueryHandler;
 import com.voxelwind.server.network.session.SessionManager;
 import com.voxelwind.server.network.util.NativeCodeFactory;
 import com.voxelwind.server.plugin.VoxelwindPluginManager;
@@ -57,10 +59,7 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
@@ -81,6 +80,7 @@ public class VoxelwindServer implements Server {
     private final VoxelwindCommandManager commandManager = new VoxelwindCommandManager();
     private VoxelwindConfiguration configuration;
     private VoxelwindLevel defaultLevel;
+    private QueryHandler queryHandler;
     private AtomicBoolean running = new AtomicBoolean(true);
 
     public static void main(String... args) throws Exception {
@@ -115,7 +115,7 @@ public class VoxelwindServer implements Server {
         Thread.currentThread().setName("Voxelwind Main Thread");
 
         // Say hello.
-        log.info("{} {} is coming online...", getName(), getVersion());
+        log.info("{} {} is coming online...", getName(), getVoxelwindVersion());
 
         // Basic initialization.
         commandManager.register("version", new VersionCommand(this));
@@ -188,6 +188,10 @@ public class VoxelwindServer implements Server {
             listeners.add(rconListener);
         }
         configuration.getRcon().clearPassword();
+
+        if (configuration.getQueryListener().isEnabled()) {
+            queryHandler = new QueryHandler(this);
+        }
 
         log.info("Now alive on {}.", listener.getAddress());
 
@@ -276,9 +280,14 @@ public class VoxelwindServer implements Server {
             } finally {
                 tickLock.unlock();
             }
-            // Close Console.
-            VoxelwindConsoleAppender.close();
         }
+        log.info("Shutting down...");
+        // Close listeners
+        listeners.forEach(NetworkListener::close);
+        listener.close();
+        // Close Console.
+        VoxelwindConsoleAppender.close();
+        log.info("Goodbye!");
     }
 
     private void loadConfiguration() throws Exception {
@@ -321,6 +330,11 @@ public class VoxelwindServer implements Server {
 
     @Override
     public String getVersion() {
+        return VersionUtil.getHumanVersionName(VersionUtil.getBroadcastProtocolVersion());
+    }
+
+    @Override
+    public String getVoxelwindVersion() {
         return VOXELWIND_VERSION;
     }
 
@@ -459,6 +473,12 @@ public class VoxelwindServer implements Server {
 
     @Override
     public void shutdown() {
+        shutdown("Server Closed");
+    }
+
+    @Override
+    public void shutdown(String reason) {
+        getSessionManager().allPlayers().parallelStream().forEach(player -> player.disconnect(reason));
         running.set(false);
     }
 
@@ -468,5 +488,9 @@ public class VoxelwindServer implements Server {
 
     public VoxelwindLevel getDefaultLevel() {
         return defaultLevel;
+    }
+
+    public Optional<QueryHandler> getQueryHandler() {
+        return Optional.ofNullable(queryHandler);
     }
 }

@@ -2,24 +2,29 @@ package com.voxelwind.api.server.event.network;
 
 import com.voxelwind.api.server.event.Event;
 import com.voxelwind.api.server.player.GameMode;
-import lombok.Getter;
+import lombok.NonNull;
 
 import java.net.InetSocketAddress;
 
-@Getter
 public class PingEvent implements Event {
-    long playerCount;
+    private long playerCount;
+    private long maxPlayers;
     private String motd;
     private String motd2;
     private final InetSocketAddress socketAddress;
     private GameMode gameMode;
+    private int protocolVersion;
+    private String minecraftVersion;
 
-    public PingEvent(long playerCount, String motd, String motd2, InetSocketAddress socketAddress, GameMode gameMode) {
+    public PingEvent(long playerCount, long maxPlayers, String motd, String motd2, InetSocketAddress socketAddress, GameMode gameMode, int protocolVersion, String minecraftVersion) {
         this.playerCount = playerCount;
+        this.maxPlayers = maxPlayers;
         this.motd = motd;
         this.motd2 = motd2;
         this.socketAddress = socketAddress;
         this.gameMode = gameMode;
+        this.protocolVersion = protocolVersion;
+        this.minecraftVersion = minecraftVersion;
     }
 
     /**
@@ -36,7 +41,7 @@ public class PingEvent implements Event {
      *
      * @param gamemode default gamemode.
      */
-    public void setGameMode(GameMode gamemode) {
+    public void setGameMode(@NonNull GameMode gamemode) {
         this.gameMode = gamemode;
     }
 
@@ -63,7 +68,7 @@ public class PingEvent implements Event {
      *
      * @param motd first line of motd.
      */
-    public void setMotd(String motd) {
+    public void setMotd(@NonNull String motd) {
         this.motd = motd;
     }
 
@@ -73,7 +78,7 @@ public class PingEvent implements Event {
      * @return second line of motd.
      */
     public String getMotd2() {
-        return motd;
+        return motd2;
     }
 
     /**
@@ -81,7 +86,7 @@ public class PingEvent implements Event {
      *
      * @param motd2 second line of motd.
      */
-    public void setMotd2(String motd2) {
+    public void setMotd2(@NonNull String motd2) {
         this.motd2 = motd2;
     }
 
@@ -101,5 +106,59 @@ public class PingEvent implements Event {
      */
     public void setPlayerCount(long playerCount) {
         this.playerCount = playerCount;
+    }
+
+    /**
+     * Gets the maximum player count which will be displayed on client's server list.
+     *
+     * @return max player count.
+     */
+    public long getMaxPlayers() {
+        return maxPlayers;
+    }
+
+    /**
+     * Sets the maximum player count which will be displayed on client's server list.
+     *
+     * @param maxPlayers max player count.
+     */
+    public void setMaxPlayers(long maxPlayers) {
+        this.maxPlayers = maxPlayers;
+    }
+
+    /**
+     * Gets the protocol version which will be shown on the server list.
+     *
+     * @return current protocol version.
+     */
+    public int getProtocolVersion() {
+        return protocolVersion;
+    }
+
+    /**
+     * Set the protocol version to be broadcast to clients on the server list.
+     *
+     * @param protocolVersion broadcasted protocol version.
+     */
+    public void setProtocolVersion(int protocolVersion) {
+        this.protocolVersion = protocolVersion;
+    }
+
+    /**
+     * Gets the Minecraft version visible on the server list to clients.
+     *
+     * @return current version used.
+     */
+    public String getMinecraftVersion() {
+        return minecraftVersion;
+    }
+
+    /**
+     * Set the Minecraft version visible on the server list to clients.
+     *
+     * @param minecraftVersion broadcasted Minecraft version.
+     */
+    public void setMinecraftVersion(@NonNull String minecraftVersion) {
+        this.minecraftVersion = minecraftVersion;
     }
 }
