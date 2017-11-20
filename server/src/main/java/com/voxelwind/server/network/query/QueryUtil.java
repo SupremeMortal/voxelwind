@@ -3,13 +3,12 @@ package com.voxelwind.server.network.query;
 import io.netty.buffer.ByteBuf;
 import lombok.experimental.UtilityClass;
 
-import javax.xml.bind.DatatypeConverter;
 import java.nio.charset.StandardCharsets;
 
 @UtilityClass
 public class QueryUtil {
-    public static final byte[] LONG_RESPONSE_PADDING_TOP = DatatypeConverter.parseHexBinary("73706c69746e756d008000");
-    public static final byte[] LONG_RESPONSE_PADDING_BOTTOM = DatatypeConverter.parseHexBinary("01706c617965725f0000");
+    public static final byte[] LONG_RESPONSE_PADDING_TOP = new byte[]{115, 112, 108, 105, 116, 110, 117, 109, 0, -128, 0};
+    public static final byte[] LONG_RESPONSE_PADDING_BOTTOM = new byte[]{1, 112, 108, 97, 121, 101, 114, 95, 0, 0};
 
     public static void writeNullTerminatedByteArray(ByteBuf buf, byte[] array) {
         if (array != null) {

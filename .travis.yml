@@ -1,5 +1,8 @@
 jdk:
   - openjdk8
+  - openjdk9
 language: java
 sudo: false
+notifications:
+  email: false
 script: mvn clean package

@@ -6,17 +6,19 @@ import net.md_5.bungee.jni.NativeCode;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.xml.bind.DatatypeConverter;
-
 public class NativeHashTest
 {
 
     private static final byte[] INPUT_1 = "Hello, world".getBytes();
     private static final byte[] INPUT_2 = "Voxelwind".getBytes();
-    private static final byte[] EXPECTED_HASH_1 = DatatypeConverter.parseHexBinary("4ae7c3b6ac0beff671efa8cf57386151c06e58ca53a78d83f36107316cec125f");
-    private static final byte[] EXPECTED_HASH_2 = DatatypeConverter.parseHexBinary("212521264f1636c6765e39e05541972c402c5e0a5a922024fed83adddcf1d51d");
+    private static final byte[] EXPECTED_HASH_1 = new byte[]{
+            74, -25, -61, -74, -84, 11, -17, -10, 113, -17, -88, -49, 87, 56, 97, 81, -64, 110, 88, -54, 83, -89, -115, -125, -13, 97, 7, 49, 108, -20, 18, 95
+    };
+    private static final byte[] EXPECTED_HASH_2 = new byte[]{
+            33, 37, 33, 38, 79, 22, 54, -58, 118, 94, 57, -32, 85, 65, -105, 44, 64, 44, 94, 10, 90, -110, 32, 36, -2, -40, 58, -35, -36, -15, -43, 29
+    };
 
-    private final NativeCode<VoxelwindHash> factory = new NativeCode( "native-hash", JavaHash.class, NativeHash.class );
+    private final NativeCode<VoxelwindHash> factory = new NativeCode<>("native-hash", JavaHash.class, NativeHash.class);
 
     @Test
     public void doTest()

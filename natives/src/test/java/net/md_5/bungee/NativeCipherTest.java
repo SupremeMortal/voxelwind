@@ -14,22 +14,23 @@ import org.junit.runners.MethodSorters;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
-import javax.xml.bind.DatatypeConverter;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class NativeCipherTest
 {
 
     private final byte[] plainBytes = "Truly, a human menace".getBytes();
-    private final byte[] cipheredBytes = DatatypeConverter.parseHexBinary("88f8ab423064f69f873f4e1773ec9a49ebde9da97b");
+    private final byte[] cipheredBytes = new byte[]{
+            -120, -8, -85, 66, 48, 100, -10, -97, -121, 63, 78, 23, 115, -20, -102, 73, -21, -34, -99, -87, 123
+    };
     private final byte[] iv = new byte[ 16 ];
     private final SecretKey secret = new SecretKeySpec( new byte[ 32 ], "AES" );
     private static final int BENCHMARK_COUNT = 4096;
     //
-    private static final NativeCode<BungeeCipher> factory = new NativeCode( "native-cipher", JavaCipher.class, NativeCipher.class );
+    private static final NativeCode<BungeeCipher> factory = new NativeCode<>("native-cipher", JavaCipher.class, NativeCipher.class);
 
     @Test
-    public void testOpenSSL() throws Exception
+    public void testNativeCipher() throws Exception
     {
         if ( NativeCode.isSupported() )
         {

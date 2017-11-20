@@ -1,7 +1,6 @@
 package net.md_5.bungee.jni;
 
 import com.google.common.io.ByteStreams;
-import io.netty.util.internal.PlatformDependent;
 import lombok.Getter;
 import net.md_5.bungee.jni.cipher.BungeeCipher;
 
@@ -11,13 +10,13 @@ public final class NativeCode<T>
 {
 
     private final String name;
-    private final Class<T> javaImpl;
-    private final Class<T> nativeImpl;
+    private final Class<? extends T> javaImpl;
+    private final Class<? extends T> nativeImpl;
     //
     @Getter
     private boolean loaded;
 
-    public NativeCode(String name, Class<T> javaImpl, Class<T> nativeImpl)
+    public NativeCode(String name, Class<? extends T> javaImpl, Class<? extends T> nativeImpl)
     {
         this.name = name;
         this.javaImpl = javaImpl;
@@ -80,7 +79,6 @@ public final class NativeCode<T>
 
     public static boolean isSupported()
     {
-        return PlatformDependent.hasUnsafe() && "Linux".equals( System.getProperty( "os.name" ) )
-                && "amd64".equals( System.getProperty( "os.arch" ) );
+        return "Linux".equals(System.getProperty("os.name")) && "amd64".equals(System.getProperty("os.arch"));
     }
 }

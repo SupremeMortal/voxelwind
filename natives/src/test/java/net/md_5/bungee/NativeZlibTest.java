@@ -16,7 +16,7 @@ import java.util.zip.DataFormatException;
 public class NativeZlibTest
 {
 
-    private final NativeCode<BungeeZlib> factory = new NativeCode( "native-compress", JavaZlib.class, NativeZlib.class );
+    private final NativeCode<BungeeZlib> factory = new NativeCode<>("native-compress", JavaZlib.class, NativeZlib.class);
 
     @Test
     public void doTest() throws DataFormatException
